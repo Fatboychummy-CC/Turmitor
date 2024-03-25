@@ -1,6 +1,13 @@
 --- Helper methods for Turmitor
 
-local data_dir = require "file_helper":instanced("data")
+local file_helper = require "file_helper"
+local logging = require "logging"
+
+local context = logging.create_context("turmitor_helper")
+
+---@diagnostic disable-next-line: inject-field I want to set the "global" working directory of file_helper here.
+file_helper.working_directory = ""
+local data_dir = file_helper:instanced("data")
 
 ---@class TurmitorHelper
 ---@field public blocks_used table<string, string> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
@@ -57,22 +64,35 @@ local turmitor_data = {
   current_color = "none"
 }
 
+---@type TurmitorData
+local default_turmitor_data = {
+  position = {
+    x = "unknown",
+    y = "unknown"
+  },
+  current_color = "none"
+}
+
 
 --- Load data from the configuration file, if it exists.
 --- On failure, determine the position of the turtle in the grid.
 function TurmitorHelper.load()
+  context.debug("Loading turmitor data.")
   turmitor_data = data_dir:unserialize(
     "turmitor_data.lson",
-    turmitor_data
+    default_turmitor_data
   )
+  context.debug("Loaded turmitor data.")
 
   if turmitor_data.position.x == "unknown" or turmitor_data.position.y == "unknown" then
-    TurmitorHelper.determine_position()
+    context.debug("Loaded data was unknown, determining position.")
+    TurmitorHelper.determine_position(true)
   end
 end
 
 --- Write the configuration file and set the turtle's label.
 function TurmitorHelper.save()
+  context.debug("Saving turmitor data.")
   data_dir:serialize("turmitor_data.lson", turmitor_data)
 
   -- And set the label
@@ -83,24 +103,33 @@ end
 ---@param x number The x position of the turtle in the grid.
 ---@param y number The y position of the turtle in the grid.
 function TurmitorHelper.set_position(x, y)
+  context.debug(("Setting position to %d, %d."):format(x, y))
   turmitor_data.position.x = x
   turmitor_data.position.y = y
   TurmitorHelper.save()
 end
 
 --- Determine the position of the turtle in the grid.
+---@param skip_load boolean? Whether to skip loading the data from the configuration file.
 ---@return boolean success Whether the operation was successful.
 ---@return string? error The error message if the operation was not successful.
-function TurmitorHelper.determine_position()
-  TurmitorHelper.load()
+function TurmitorHelper.determine_position(skip_load)
+  context.info("Determining position.")
+  if not skip_load then
+    TurmitorHelper.load()
+  end
   TurmitorHelper.face_correct_direction()
 
   -- If we already know our position, we're done.
   if turmitor_data.position.x ~= "unknown" and turmitor_data.position.y ~= "unknown" then
     ---@diagnostic disable-next-line: param-type-mismatch I literally check if it is not "unknown" above here shut up
     TurmitorHelper.set_position(turmitor_data.position.x, turmitor_data.position.y)
+
+    context.debug("We knew the position from our saved data.")
     return true
   end
+
+  context.debug("Continuing to determine position.")
 
   -- Turn to the right.
   turtle.turnRight()
@@ -117,18 +146,22 @@ function TurmitorHelper.determine_position()
     end
 
     -- Wait for the turtle above to know its position.
+    context.info("Waiting for turtle above to know its position.")
     while true do
       local top_label = peripheral.call("top", "getLabel")
 
       if top_label and top_label ~= "Unknown" then
+        context.debug("Turtle above knows its position.")
         -- We know the turtle above's position, so we can determine our Y position.
         local x, y = top_label:match("(%d+),(%d+)")
         x, y = tonumber(x), tonumber(y)
 
         if x and y then
           TurmitorHelper.set_position(1, y + 1)
+          turtle.turnLeft()
           return true
         else
+          context.error("Turtle above is giving us unknown position.")
           return false, "Turtle above is giving us unknown position."
         end
       end
@@ -140,18 +173,22 @@ function TurmitorHelper.determine_position()
   end
 
   -- Wait for the turtle in front to know its position.
+  context.info("Waiting for turtle in front to know its position.")
   while true do
     local front_label = peripheral.call("front", "getLabel")
 
     if front_label and front_label ~= "Unknown" then
+      context.debug("Turtle in front knows its position.")
       -- We know the turtle in front's position, so we can determine our X and Y positions.
       local x, y = front_label:match("(%d+),(%d+)")
       x, y = tonumber(x), tonumber(y)
 
       if x and y then
         TurmitorHelper.set_position(x + 1, y)
+        turtle.turnLeft()
         return true
       else
+        context.error("Turtle in front is giving us unknown position.")
         return false, "Turtle in front is giving us unknown position."
       end
     end
@@ -159,13 +196,21 @@ function TurmitorHelper.determine_position()
     sleep(1)
   end
 
+  context.fatal("Unknown error determining position (2).")
   return false, "Unknown error determining position (2)."
 end
 
 --- Face the turtle in the "correct" direction, that is, so the wired modem is behind the turtle.
 function TurmitorHelper.face_correct_direction()
+  context.debug("Attempt face correct direction.")
+
+  local i = 0
   while peripheral.getType("back") ~= "modem" do
     turtle.turnRight()
+    i = i + 1
+    if i > 4 then
+      error("Could not find the modem behind the turtle.")
+    end
   end
 end
 
@@ -173,6 +218,7 @@ end
 ---@return boolean success Whether the operation was successful.
 ---@return string? error The error message if the operation was not successful.
 function TurmitorHelper.grab_concrete()
+  context.info("Grabbing concrete.")
   -- A lookup table of all the blocks we don't have.
   local blocks_dont_have = {}
   for k in pairs(TurmitorHelper.blocks_used) do
@@ -189,19 +235,30 @@ function TurmitorHelper.grab_concrete()
 
   -- If we have all the blocks, we're done.
   if not next(blocks_dont_have) then
+    context.debug("We have all the blocks we need.")
     return true
   end
 
   -- If we don't, check the chest.
   local chest = peripheral.find("minecraft:chest")
   if not chest then
+    context.error("No chest found.")
     -- No chest, cannot continue.
     return false, "No chest found."
   end
 
+  context.debug(("We need %d blocks."):format((function()
+    local count = 0
+    for _ in pairs(blocks_dont_have) do
+      count = count + 1
+    end
+    return count
+  end)()))
+
   -- Get the turtle's name from the modem. Modem should be behind the turtle.
   local turtle_name = peripheral.call("back", "getNameLocal")
   if not turtle_name then
+    context.error("Could not determine the turtle's name.")
     -- No name, cannot continue.
     return false, "Could not determine the turtle's name. Is the modem behind the turtle (and enabled)?"
   end
@@ -209,6 +266,8 @@ function TurmitorHelper.grab_concrete()
   -- Check the chest for the blocks we need.
   for item_needed in pairs(blocks_dont_have) do
     local found = false
+
+    context.info(("Looking for '%s' in the chest."):format(item_needed))
 
     -- For each slot with an item in it, check if it's the block we need.
     for slot, item in pairs(chest.list()) do
@@ -225,6 +284,7 @@ function TurmitorHelper.grab_concrete()
     end
 
     if not found then
+      context.error(("Could not find '%s' in the chest."):format(item_needed))
       -- We couldn't find the block we need.
       return false, ("Could not find '%s' in the chest."):format(item_needed)
     end
