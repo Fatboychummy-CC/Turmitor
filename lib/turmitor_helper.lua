@@ -9,9 +9,11 @@ local context = logging.create_context("turmitor_helper")
 file_helper.working_directory = ""
 local data_dir = file_helper:instanced("data")
 
+---@alias valid_colors "white"|"lightGray"|"gray"|"black"|"brown"|"red"|"orange"|"yellow"|"lime"|"green"|"cyan"|"lightBlue"|"blue"|"purple"|"magenta"|"pink"
+
 ---@class TurmitorHelper
 ---@field public blocks_used table<string, string> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
----@field public color_map table<string, integer> A map of color names to the inventory slot they should be in for the turtle.
+---@field public color_map table<valid_colors, integer> A map of color names to the inventory slot they should be in for the turtle.
 local TurmitorHelper = {
   blocks_used = {
     ["minecraft:white_concrete"] = "white",
@@ -51,7 +53,6 @@ local TurmitorHelper = {
   }
 }
 
----@alias valid_colors "white"|"lightGray"|"gray"|"black"|"brown"|"red"|"orange"|"yellow"|"lime"|"green"|"cyan"|"lightBlue"|"blue"|"purple"|"magenta"|"pink"
 
 ---@class TurmitorData The data for the turmitor.
 ---@field position {x:"unknown"|number, y:"unknown"|number} The position of the turtle in the grid.
@@ -107,6 +108,13 @@ function TurmitorHelper.set_position(x, y)
   turmitor_data.position.x = x
   turmitor_data.position.y = y
   TurmitorHelper.save()
+end
+
+--- Get the position of the turtle in the grid.
+---@return number|"unknown" x The x position of the turtle in the grid.
+---@return number|"unknown" y The y position of the turtle in the grid.
+function TurmitorHelper.get_position()
+  return turmitor_data.position.x, turmitor_data.position.y
 end
 
 --- Determine the position of the turtle in the grid.
@@ -233,6 +241,12 @@ function TurmitorHelper.grab_concrete()
     end
   end
 
+  local is_block, block_data = turtle.inspect()
+  if is_block then
+    blocks_dont_have[block_data.name] = nil
+    turmitor_data.current_color = TurmitorHelper.blocks_used[block_data.name]
+  end
+
   -- If we have all the blocks, we're done.
   if not next(blocks_dont_have) then
     context.debug("We have all the blocks we need.")
@@ -240,7 +254,7 @@ function TurmitorHelper.grab_concrete()
   end
 
   -- If we don't, check the chest.
-  local chest = peripheral.find("minecraft:chest")
+  local chest = peripheral.find("minecraft:chest") --[[@as Inventory]]
   if not chest then
     context.error("No chest found.")
     -- No chest, cannot continue.
@@ -273,7 +287,7 @@ function TurmitorHelper.grab_concrete()
     for slot, item in pairs(chest.list()) do
       if item.name == item_needed then
         -- We found the block we need. Grab it.
-        local moved = chest.pushItems(turtle_name, slot, 1)
+        local moved = chest.pushItems(turtle_name, slot, 1, TurmitorHelper.color_map[TurmitorHelper.blocks_used[item_needed]])
 
         if moved == 1 then
           -- We successfully grabbed the block we need.
@@ -289,6 +303,37 @@ function TurmitorHelper.grab_concrete()
       return false, ("Could not find '%s' in the chest."):format(item_needed)
     end
   end
+
+  return true
+end
+
+--- Place a block of concrete of the given color.
+---@param color valid_colors The color of the block to place.
+---@return boolean success Whether the operation was successful.
+function TurmitorHelper.place_concrete_color(color)
+  if not TurmitorHelper.color_map[color] then
+    error(("Invalid color '%s'."):format(color))
+  end
+
+  if turmitor_data.current_color == color then
+    -- The block we want is already placed.
+    return true
+  end
+
+  -- pick up the current block:
+  -- 1. Select the position of the block we want to pick up
+  -- 2. Pick up the block
+  turtle.select(TurmitorHelper.color_map[color])
+  turtle.dig()
+
+  -- place the block
+  -- 1. Select the position of the block we want to place
+  -- 2. Place the block
+  turtle.select(TurmitorHelper.color_map[color])
+  turtle.place()
+
+  turmitor_data.current_color = color
+  TurmitorHelper.save()
 
   return true
 end

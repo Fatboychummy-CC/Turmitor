@@ -44,6 +44,15 @@ package.path = package.path .. ";lib/?.lua;lib/?/init.lua"
 local logging = require "logging"
 logging.set_level(logging.LOG_LEVEL.DEBUG)
 
+
+--[ [
 local plugin_loader = require "plugin_loader"
 plugin_loader.register_all()
 plugin_loader.run()
+--]]
+
+if turtle then
+  require("turmitor_turtle")
+else
+  require("turmitor_control")
+end
