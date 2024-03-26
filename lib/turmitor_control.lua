@@ -57,7 +57,7 @@ function TurmitorControl.steal_concrete()
     for i = 1, 16 do
       -- Attempt to pull an item to the last slot of the chest.
       table.insert(parallel_pull_calls, function()
-        chest.pullItems(peripheral.getName(turtle), i, 1)
+        chest.pullItems(peripheral.getName(turtle), i, nil)
       end)
     end
 
