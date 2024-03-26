@@ -29,7 +29,7 @@ return function(filename)
           break
         end
 
-        row[#row + 1] = bit32.extract(byte, 7-j, 1) == 1 and '0' or 'f'
+        row[#row + 1] = bit32.extract(byte, 7-j, 1) == 1
       end
       current_pos = current_pos + 8
     end
