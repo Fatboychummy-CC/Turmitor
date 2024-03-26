@@ -45,14 +45,14 @@ local logging = require "logging"
 logging.set_level(logging.LOG_LEVEL.DEBUG)
 
 
---[ [
 local plugin_loader = require "plugin_loader"
 plugin_loader.register_all()
-plugin_loader.run()
---]]
 
-if turtle then
-  require("turmitor_turtle")
-else
-  require("turmitor_control")
+local ok, err = pcall(
+  plugin_loader.run
+)
+
+if not ok then
+  logging.create_context("ERROR").error("Error running plugins: " .. err)
+  logging.dump_log("disk/log.txt")
 end
