@@ -23,15 +23,28 @@ function TurmitorMainPlugin.init()
     logger.info("Initializing Turmitor Turtle.")
     TurmitorHelper.determine_position()
     TurmitorHelper.face_correct_direction()
-    TurmitorHelper.grab_concrete()
+    while not TurmitorHelper.grab_concrete() do
+      logger.info("Waiting for concrete.")
+      sleep(5)
+    end
     TurmitorHelper.save()
     logger.info("Turmitor Turtle initialized.")
 
     logger.info("Launching communication handler.")
     local x, y = TurmitorHelper.get_position()
     TurmitorCommunication.set_modem("back")
+
+    local function wrapper(color)
+      if color == "reset" then
+        -- Reset the turtle by wiping the data file and shutting down.
+        TurmitorHelper.reset()
+      else
+        TurmitorHelper.place_concrete_color(color)
+      end
+    end
+
     thready.spawn(
-      TurmitorCommunication.turtle_handle_comms, x, y, TurmitorHelper.place_concrete_color
+      TurmitorCommunication.turtle_handle_comms, x, y, wrapper
     )
 
     logger.info("Placing black screen.")
@@ -62,6 +75,11 @@ function TurmitorMainPlugin.run()
       elseif color == "take_concrete" then
         TurmitorControl.steal_concrete()
         os.queueEvent("terminate")
+      elseif color == "wipe_turtles" then
+        TurmitorCommunication.transmit_reset()
+        sleep(3)
+        --TurmitorControl.stop_turtles()
+        --os.queueEvent("terminate")
       end
     end
   end

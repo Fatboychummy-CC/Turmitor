@@ -57,6 +57,11 @@ function TurmitorCommunication.send_color_clear(color)
   smn.transmit(TurmitorCommunication.CHANNEL_ALL, TurmitorCommunication.CHANNEL_TURTLE_REPLY, color)
 end
 
+--- Transmit a reset message to the turtles.
+function TurmitorCommunication.transmit_reset()
+  smn.transmit(TurmitorCommunication.CHANNEL_ALL, TurmitorCommunication.CHANNEL_TURTLE_REPLY, "reset")
+end
+
 
 --- Set the modem network to use.
 ---@param modem_side computerSide The side of the modem to use.

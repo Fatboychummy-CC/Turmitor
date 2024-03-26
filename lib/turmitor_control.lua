@@ -17,14 +17,14 @@ function TurmitorControl.start_turtles()
   local turtles = table.pack(smn.find("turtle"))
 
   for i = 1, turtles.n do
-    context.info("Shutting down turtle ", i, ":", peripheral.getName(turtles[i]), ".")
+    context.info("Shutting down turtle ", i, ":", peripheral.getName(turtles[i]))
     turtles[i].shutdown()
   end
 
   sleep(0.25)
 
   for i = 1, turtles.n do
-    context.info("Starting turtle ", i, ":", peripheral.getName(turtles[i]), ".")
+    context.info("Starting turtle ", i, ":", peripheral.getName(turtles[i]))
     turtles[i].turnOn()
   end
 end
