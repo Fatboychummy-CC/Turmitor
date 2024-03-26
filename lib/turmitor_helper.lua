@@ -53,6 +53,31 @@ local TurmitorHelper = {
   }
 }
 
+if turtle then
+  local function wipe_queue()
+    os.queueEvent("__queue_end")
+    for i = 1, math.huge do
+      local ev = os.pullEvent()
+      if ev == "__queue_end" then break end
+      if i % 128 == 0 then os.queueEvent("__queue_end") end
+    end
+  end
+
+  local tr = turtle.turnRight
+  turtle.turnRight = function() ---@diagnostic disable-line
+    coroutine.resume(coroutine.create(tr))
+    wipe_queue()
+    sleep(0.5)
+  end
+
+  local tl = turtle.turnLeft
+  turtle.turnLeft = function() ---@diagnostic disable-line
+    coroutine.resume(coroutine.create(tl))
+    wipe_queue()
+    sleep(0.5)
+  end
+end
+
 
 ---@class TurmitorData The data for the turmitor.
 ---@field position {x:"unknown"|number, y:"unknown"|number} The position of the turtle in the grid.
@@ -100,6 +125,15 @@ function TurmitorHelper.save()
   os.setComputerLabel(("%d,%d"):format(turmitor_data.position.x, turmitor_data.position.y))
 end
 
+--- Reset the turmitor data.
+function TurmitorHelper.reset()
+  context.debug("Resetting turmitor data.")
+  turmitor_data = default_turmitor_data
+  data_dir:delete("turmitor_data.lson")
+  os.setComputerLabel()
+  os.shutdown()
+end
+
 --- Set the position of the turtle in the grid.
 ---@param x number The x position of the turtle in the grid.
 ---@param y number The y position of the turtle in the grid.
@@ -142,20 +176,26 @@ function TurmitorHelper.determine_position(skip_load)
   -- Turn to the right.
   turtle.turnRight()
 
+  context.debug("Turned right, check front.")
   -- Check for a turtle in front.
   if not turtle.detect() then
     -- If there's no turtle in front, we're at the edge of the grid, but we don't know our Y position yet.
+    context.debug("Nothing in front, check above.")
 
     -- Check for a turtle above.
     if not turtle.detectUp() then
       -- If there's no turtle above, we're at the corner of the grid.
       TurmitorHelper.set_position(1, 1)
+      context.debug("No turtle above, we're at the corner of the grid.")
+      turtle.turnLeft()
+      context.debug("Turned left.")
       return true
     end
 
     -- Wait for the turtle above to know its position.
     context.info("Waiting for turtle above to know its position.")
     while true do
+      context.debug("Get label top")
       local top_label = peripheral.call("top", "getLabel")
 
       if top_label and top_label ~= "Unknown" then
@@ -166,7 +206,9 @@ function TurmitorHelper.determine_position(skip_load)
 
         if x and y then
           TurmitorHelper.set_position(1, y + 1)
+          context.debug("Set position to 1, y + 1.")
           turtle.turnLeft()
+          context.debug("Turned left.")
           return true
         else
           context.error("Turtle above is giving us unknown position.")
@@ -174,6 +216,7 @@ function TurmitorHelper.determine_position(skip_load)
         end
       end
 
+      context.debug("Unknown still, wait.")
       sleep(1)
     end
 
@@ -183,6 +226,7 @@ function TurmitorHelper.determine_position(skip_load)
   -- Wait for the turtle in front to know its position.
   context.info("Waiting for turtle in front to know its position.")
   while true do
+    context.debug("Get label front")
     local front_label = peripheral.call("front", "getLabel")
 
     if front_label and front_label ~= "Unknown" then
@@ -193,7 +237,9 @@ function TurmitorHelper.determine_position(skip_load)
 
       if x and y then
         TurmitorHelper.set_position(x + 1, y)
+        context.debug("Set position to x + 1, y.")
         turtle.turnLeft()
+        context.debug("Turned left.")
         return true
       else
         context.error("Turtle in front is giving us unknown position.")
@@ -201,6 +247,7 @@ function TurmitorHelper.determine_position(skip_load)
       end
     end
 
+    context.debug("Unknown still, wait.")
     sleep(1)
   end
 
@@ -214,10 +261,27 @@ function TurmitorHelper.face_correct_direction()
 
   local i = 0
   while peripheral.getType("back") ~= "modem" do
+    context.debug("Turn right, no modem behind.")
     turtle.turnRight()
     i = i + 1
     if i > 4 then
       error("Could not find the modem behind the turtle.")
+    end
+    context.debug("Turned.")
+  end
+end
+
+function TurmitorHelper.check_wrong_concrete()
+  context.debug("Checking for wrong concrete.")
+  for slot = 1, 16 do
+    local item = turtle.getItemDetail(slot)
+
+    if item then
+      if slot ~= TurmitorHelper.color_map[TurmitorHelper.blocks_used[item.name]] then
+        context.warn(("Slot %d has the wrong concrete, dropping it."):format(slot))
+        turtle.select(slot)
+        turtle.drop()
+      end
     end
   end
 end
@@ -226,6 +290,8 @@ end
 ---@return boolean success Whether the operation was successful.
 ---@return string? error The error message if the operation was not successful.
 function TurmitorHelper.grab_concrete()
+  TurmitorHelper.check_wrong_concrete()
+
   context.info("Grabbing concrete.")
   -- A lookup table of all the blocks we don't have.
   local blocks_dont_have = {}
@@ -286,6 +352,7 @@ function TurmitorHelper.grab_concrete()
     -- For each slot with an item in it, check if it's the block we need.
     for slot, item in pairs(chest.list()) do
       if item.name == item_needed then
+        context.debug("We see the item")
         -- We found the block we need. Grab it.
         local moved = chest.pushItems(turtle_name, slot, 1, TurmitorHelper.color_map[TurmitorHelper.blocks_used[item_needed]])
 
@@ -293,6 +360,8 @@ function TurmitorHelper.grab_concrete()
           -- We successfully grabbed the block we need.
           found = true
           break
+        else
+          context.debug("We failed to move it lol")
         end -- otherwise we failed (another turtle probably grabbed it first), so we continue to the next slot.
       end
     end
