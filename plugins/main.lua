@@ -34,17 +34,17 @@ function TurmitorMainPlugin.init()
     local x, y = TurmitorHelper.get_position()
     TurmitorCommunication.set_modem("back")
 
-    local function wrapper(color)
-      if color == "reset" then
-        -- Reset the turtle by wiping the data file and shutting down.
+    local function handle_action(action)
+      if action == "reset" then
+        logger.info("Resetting turtle.")
         TurmitorHelper.reset()
-      else
-        TurmitorHelper.place_concrete_color(color)
       end
     end
 
     thready.spawn(
-      TurmitorCommunication.turtle_handle_comms, x, y, wrapper
+      TurmitorCommunication.turtle_handle_comms,
+      x, y,
+      TurmitorHelper.place_concrete_color, handle_action
     )
 
     logger.info("Placing black screen.")
@@ -68,19 +68,13 @@ function TurmitorMainPlugin.run()
 
   if not turtle then
     while true do
-      print("Enter color.")write("> ")
-      local color = read() --[[@as string]]
-      if TurmitorHelper.color_map[color] then
-        TurmitorCommunication.send_color_clear(color)
-      elseif color == "take_concrete" then
-        TurmitorControl.steal_concrete()
-        os.queueEvent("terminate")
-      elseif color == "wipe_turtles" then
-        TurmitorCommunication.transmit_reset()
-        sleep(3)
-        --TurmitorControl.stop_turtles()
-        --os.queueEvent("terminate")
-      end
+      print("Enter fg color.")
+      local fg = read()
+      print("Enter bg color.")
+      local bg = read()
+      print("Enter a character.")
+      local char = read()
+      TurmitorCommunication.transmit_character(1, 1, char, fg, bg)
     end
   end
 end
