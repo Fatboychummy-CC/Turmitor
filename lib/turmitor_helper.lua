@@ -320,7 +320,7 @@ function TurmitorHelper.grab_concrete()
   end
 
   -- If we don't, check the chest.
-  local chest = peripheral.find("minecraft:chest") --[[@as Inventory]]
+  local chest = peripheral.find("inventory") --[[@as Inventory]]
   if not chest then
     context.error("No chest found.")
     -- No chest, cannot continue.
@@ -371,6 +371,10 @@ function TurmitorHelper.grab_concrete()
       -- We couldn't find the block we need.
       return false, ("Could not find '%s' in the chest."):format(item_needed)
     end
+  end
+
+  if not TurmitorHelper.check_wrong_concrete() then
+    return false, "Some concrete was placed in the wrong slot."
   end
 
   return true
