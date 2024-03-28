@@ -173,86 +173,69 @@ function TurmitorHelper.determine_position(skip_load)
 
   context.debug("Continuing to determine position.")
 
-  -- Turn to the right.
-  turtle.turnRight()
-
-  context.debug("Turned right, check front.")
-  -- Check for a turtle in front.
-  if not turtle.detect() then
-    -- If there's no turtle in front, we're at the edge of the grid, but we don't know our Y position yet.
-    context.debug("Nothing in front, check above.")
-
-    -- Check for a turtle above.
-    if not turtle.detectUp() then
-      -- If there's no turtle above, we're at the corner of the grid.
-      TurmitorHelper.set_position(1, 1)
-      context.debug("No turtle above, we're at the corner of the grid.")
-      turtle.turnLeft()
-      context.debug("Turned left.")
-      return true
-    end
-
-    -- Wait for the turtle above to know its position.
-    context.info("Waiting for turtle above to know its position.")
+  --- Watch the sides of the turtle until they give a direction.
+  ---@param top boolean Whether to watch the top side.
+  ---@param right boolean Whether to watch the right side.
+  ---@return number? x The x position of the turtle in the grid, or nil if the position is unknown.
+  ---@return number? y The y position of the turtle in the grid, or nil if the position is unknown.
+  ---@return "top"|"right" side The side that gave the position.
+  local function watch_sides(top, right)
     while true do
-      context.debug("Get label top")
-      local top_label = peripheral.call("top", "getLabel")
+      local label_top = top and peripheral.call("top", "getLabel")
+      local label_right = right and peripheral.call("right", "getLabel")
 
-      if top_label and top_label ~= "Unknown" then
-        context.debug("Turtle above knows its position.")
-        -- We know the turtle above's position, so we can determine our Y position.
-        local x, y = top_label:match("(%d+),(%d+)")
-        x, y = tonumber(x), tonumber(y)
-
-        if x and y then
-          TurmitorHelper.set_position(1, y + 1)
-          context.debug("Set position to 1, y + 1.")
-          turtle.turnLeft()
-          context.debug("Turned left.")
-          return true
-        else
-          context.error("Turtle above is giving us unknown position.")
-          return false, "Turtle above is giving us unknown position."
-        end
+      if label_top and label_top:match("(%d+),(%d+)") then
+        local x, y = label_top:match("(%d+),(%d+)")
+        return tonumber(x), tonumber(y), "top"
       end
 
-      context.debug("Unknown still, wait.")
+      if label_right and label_right:match("(%d+),(%d+)") then
+        local x, y = label_right:match("(%d+),(%d+)")
+        return tonumber(x), tonumber(y), "right"
+        end
+
       sleep(1)
     end
-
-    return false, "Unknown error determining position (1)."
   end
 
-  -- Wait for the turtle in front to know its position.
-  context.info("Waiting for turtle in front to know its position.")
-  while true do
-    context.debug("Get label front")
-    local front_label = peripheral.call("front", "getLabel")
-
-    if front_label and front_label ~= "Unknown" then
-      context.debug("Turtle in front knows its position.")
-      -- We know the turtle in front's position, so we can determine our X and Y positions.
-      local x, y = front_label:match("(%d+),(%d+)")
-      x, y = tonumber(x), tonumber(y)
-
+  --- Set the position of the turtle in the grid.
+  ---@param x number? The x position of the turtle in the grid.
+  ---@param y number? The y position of the turtle in the grid.
+  ---@param side "top"|"right"|"none" The side that gave the position.
+  ---@return boolean success Whether the operation was successful.
+  ---@return string? error The error message if the operation was not successful.
+  local function x_y(x, y, side)
       if x and y then
-        TurmitorHelper.set_position(x + 1, y)
-        context.debug("Set position to x + 1, y.")
-        turtle.turnLeft()
-        context.debug("Turned left.")
+      TurmitorHelper.set_position(side == "right" and x + 1 or x, side == "top" and y + 1 or y)
+      context.debug("Set position to x, y.")
         return true
       else
-        context.error("Turtle in front is giving us unknown position.")
-        return false, "Turtle in front is giving us unknown position."
-      end
+      context.error("Unknown error determining position.")
+      return false, "Unknown error determining position."
     end
-
-    context.debug("Unknown still, wait.")
-    sleep(1)
   end
 
-  context.fatal("Unknown error determining position (2).")
-  return false, "Unknown error determining position (2)."
+  if peripheral.getType("right") == "turtle" then
+    context.debug("There is a turtle on the right.")
+    if peripheral.getType("top") == "turtle" then
+      context.debug("There is a turtle on the top.")
+      return x_y(watch_sides(true, true))
+    else
+      context.debug("There is no turtle on the top.")
+      return x_y(watch_sides(false, true))
+    end
+  else
+    context.debug("There is no turtle on the right.")
+    if peripheral.getType("top") == "turtle" then
+      context.debug("There is a turtle on the top.")
+      return x_y(watch_sides(true, false))
+    else
+      context.debug("There is no turtle on the top or right, we are 1,1.")
+      return x_y(1, 1, "none")
+    end
+  end
+
+  context.error("Unknown error determining position.")
 end
 
 --- Face the turtle in the "correct" direction, that is, so the wired modem is behind the turtle.
