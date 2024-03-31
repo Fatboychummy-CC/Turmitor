@@ -11,7 +11,7 @@ return function(filename)
 
   local header_name, width = header:match("^(....)(..)$")
   if header_name ~= "FBMP" then
-    error("Invalid header: " .. header_name)
+    error("Invalid fbmp header: " .. header_name)
   end
   width = string.unpack("<I2", width)
 
