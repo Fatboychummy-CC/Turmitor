@@ -1,10 +1,3 @@
---- This is a "combination" of the entire project (other than some of the extra
---- libraries that exist in the project). I want to condense the entire project
---- into a single, requirable file (again, disregarding other libraries used).
---- Possibly two "main" files, and some etc library files.
---- There does need to be client and server code, so I will need to separate
---- those out.
-
 --- This is the Turmitor Client file. To use this, put it on a disk drive that
 --- is connected to a network of turtles. Ensure that you right-click the modem
 --- connecting the drive to the network, so that the turtles can actually see
@@ -607,6 +600,22 @@ local function listen_for_placements()
             message.data.fg,
             message.data.bg
           )
+        elseif message.action == "place-batch" then
+          -- Check if this turtle is one of the turtles that should place a
+          -- block.
+          for _, order in ipairs(message.data.orders) do
+            if order.x == TurmitorClient.position.x
+              and order.z == TurmitorClient.position.z then
+              TurmitorClient.queue_block(order.color)
+              break
+            end
+          end
+        elseif message.action == "place" then
+          -- Check if this is the turtle that is being told to place a block.
+          if message.data.x == TurmitorClient.position.x
+            and message.data.z == TurmitorClient.position.z then
+            TurmitorClient.queue_block(message.data.color)
+          end
         end
       elseif _channel == turmitor_channels.CHANNEL_ALL then
         if message.action == "clear" then
