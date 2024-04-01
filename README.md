@@ -5,6 +5,15 @@ map-art! No guarantee on any sort of stable TPS while this is running!
 
 Turtle + Monitor = Turmitor
 
+```diff
+===================================================================
+@@                            WARNING                            @@
+===================================================================
+- Turmitor is still in development, and is not yet ready for use. -
+-        You will not get it to work in its current state!        -
+===================================================================
+```
+
 ## Setup
 
 Turmitor requires a fair amount of setup, and *a lot* of concrete (or other
@@ -67,7 +76,8 @@ Place your array of modems flat in a rectangle. Pretty self explanatory.
 **2. Place the turtles**
 
 Directly on top of each modem, place a turtle. The turtle's facing does not
-matter, they will sort themselves out.
+matter, they will sort themselves out. Do not worry about putting concrete into
+the turtles yet either, that will be completed in a future step.
 
 <details><summary>Placement Example</summary>
 
@@ -130,8 +140,9 @@ Place your array of modems in a vertical plane. Pretty self explanatory.
 
 **2. Place the turtles**
 
-Directly on front of each modem, place a turtle. The turtle's facing does not
-matter, they will sort themselves out.
+Directly in front of each modem, place a turtle. The turtle's facing does not
+matter, they will sort themselves out. Do not worry about putting concrete into
+the turtles yet either, that will be completed in a future step.
 
 <details><summary>Placement Example</summary>
 
