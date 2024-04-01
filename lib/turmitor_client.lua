@@ -708,6 +708,7 @@ function TurmitorClient.run()
   get_blocks()
 
   client_main.info("Initialization complete. Placing black block.")
+
   -- Ensure that the screen is blank.
   place_block("black")
 
