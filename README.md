@@ -82,7 +82,7 @@ you do this does not matter, just make sure to get them all!
 
 <details><summary>Toggled Modems</summary>
 
-![Modem Toggle](images/horizontal_setup/3_modem_toggle.png)
+![Modem Toggle](images/horizontal_setup/3_toggle_modems.png)
 
 </details>
 
@@ -146,7 +146,7 @@ you do this does not matter, just make sure to get them all!
 
 <details><summary>Toggled Modems</summary>
 
-![Modem Toggle](images/vertical_setup/3_modem_toggle.png)
+![Modem Toggle](images/vertical_setup/3_toggle_modems.png)
 
 </details>
 
