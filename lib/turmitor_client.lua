@@ -32,6 +32,52 @@
 --- does not need any sort of guide block, as they can just check if another
 --- turtle is above them or not.
 
+--[[
+  Clients will act on the following actions without responding:
+  - character: Have the specified 6x9 array of turtles place a character.
+    - data: table
+      - char_x: number The x position of the character in the font.
+      - char_y: number The y position of the character in the font.
+      - fg: valid_colors The foreground color of the character.
+      - bg: valid_colors The background color of the character.
+  - place-batch: Have the specified turtles place a batch of blocks.
+    - data: table
+      - orders: list<table>
+        - x: number The x position of the turtle.
+        - z: number The z position of the turtle.
+        - color: valid_colors The color of the block to place.
+  - place: Have a single specified turtle place a block.
+    - data: table
+      - x: number The x position of the turtle.
+      - z: number The z position of the turtle.
+      - color: valid_colors The color of the block to place.
+  - clear: Have all turtles clear the screen.
+  - reset: Have all turtles reset their position data.
+
+  Clients will respond for the following actions:
+  - get-size: Get the size of the array. Only the bottom-right-most turtle will
+    respond.
+    - response: table
+      - x: number The x size of the array.
+      - z: number The z size of the array.
+
+  For example, to send a character:
+  ```lua
+  local to_transmit = {
+    action = "character",
+    data = {
+      char_x = 37,
+      char_y = 16,
+      fg = "white",
+      bg = "black"
+    }
+  }
+  ```
+  Assuming the character's top-left position in `font.fbmp` is at 37, 16, and
+  the foreground color is white and the background color is black. 
+]]
+
+
 -- Do not run if not on a turtle
 if not turtle then
   error("The Turmitor Client can only run on a turtle.", 0)
@@ -141,7 +187,8 @@ local TurmitorClient = {
   color_want = "black",
   guideblock_top = "minecraft:polished_andesite",
   guideblock_left = "minecraft:polished_diorite",
-  control_channel = -1
+  control_channel = -1,
+  is_bottom_right_corner = false,
 }
 
 -- Private (local) functions
@@ -462,6 +509,10 @@ local function _determine_vertical()
       label_up = peripheral.call("top", "getLabel")
     end
 
+    if not get_turtle_label("bottom") and not get_turtle_label("left") then
+      TurmitorClient.is_bottom_right_corner = true
+    end
+
     local x, z = label_right:match(TURTLE_LABEL_MATCHER)
     if x and z then
       return x + 1, z
@@ -479,7 +530,7 @@ local function _determine_vertical()
       label_right = peripheral.call("right", "getLabel")
     end
 
-    local x, z = label_right:match(TURTLE_LABEL_MATCHER)
+    local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
     return x + 1, 1
   end
 
@@ -491,7 +542,7 @@ local function _determine_vertical()
       label_up = peripheral.call("top", "getLabel")
     end
 
-    local x, z = label_up:match(TURTLE_LABEL_MATCHER)
+    local _, z = label_up:match(TURTLE_LABEL_MATCHER)
     return 1, z + 1
   end
 
@@ -770,6 +821,22 @@ local function listen_for_placements()
       elseif _channel == turmitor_channels.CHANNEL_ALL then
         if message.action == "clear" then
           place_block(message.data.color)
+        elseif message.action == "reset" then
+          reset()
+        elseif message.action == "get-size" then
+          if TurmitorClient.is_bottom_right_corner then
+            smn.transmit(
+              turmitor_channels.CHANNEL_TURTLE_REPLY,
+              TurmitorClient.control_channel,
+              {
+                action = "size",
+                data = {
+                  x = TurmitorClient.position.char_x + 1,
+                  z = TurmitorClient.position.char_z + 1
+                }
+              }
+            )
+          end
         end
       end
     end
