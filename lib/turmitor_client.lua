@@ -87,7 +87,8 @@ local TURTLE_LABEL_MATCHER = "(%d+),(%d+)"
 ---@field public color_map table<valid_colors, integer> A map of color names to the inventory slot they should be in for the turtle.
 ---@field public current_color valid_colors? The current color that the turtle has placed.
 ---@field public color_want valid_colors? The color that the turtle wants to place next. This can update while currently placing a block, and allows the turtle to immediately place what is needed next, if needed.
----@field public guideblock string The block that is used to guide the turtle in the horizontal array style. This is by default polished andesite.
+---@field public guideblock_top "minecraft:polished_andesite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished andesite.
+---@field public guideblock_left "minecraft:polished_diorite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished diorite.
 ---@field public control_channel number The channel that the turtle listens on for control messages.
 local TurmitorClient = {
   position = {
@@ -138,7 +139,8 @@ local TurmitorClient = {
   },
   current_color = nil,
   color_want = "black",
-  guideblock = "minecraft:polished_andesite",
+  guideblock_top = "minecraft:polished_andesite",
+  guideblock_left = "minecraft:polished_diorite",
   control_channel = -1
 }
 
@@ -498,26 +500,174 @@ local function _determine_vertical()
 end
 
 --- Determine the position of the turtle in the grid, horizontal style.
+--- This entire function is a mess, but I'm unsure how I'd clean it up.
 ---@return number x The x position of the turtle in the grid.
 ---@return number z The z position of the turtle in the grid.
 local function _determine_horizontal()
   -- Determining the horizontal position is a bit more of a pain.
   -- 1. Check all sides to see if there is a turtle there.
   -- 2. If no turtle is in that direction, turn and check if there is a guide
-  --    block there.
-  -- 3. If a guideblock is there, then the turtle knows it is at z=1.
+  --    block there. At most, two sides should be empty.
+  -- 3. If a top guideblock is there, then the turtle knows it is at z=1.
   --    a) From there, the turtle should face left and wait until the turtle in
   --       front knows its position, then it is at x+1,1.
-  --    b) If no turtle is in front while facing left, then the turtle is at 1,1.
+  --    b) If a left guideblock is there, then the turtle knows it is at x=1.
   -- 4. If no guideblock, repeat step 3 with any other sides that are empty.
-  -- 5. If no sides are empty, continuously check each sides until we find a
-  --    turtle that knows its position. Depending on what sides are available
-  --    when facing the known turtle...
-  --    a) turtle front, open space left: at x=1.
-  --    b) any other orientation: must wait for a second turtle to know its
-  --       position. 
+  -- 5. If no sides are empty, continuously check each side until we find a
+  --    turtle that knows its position. Must wait for a second turtle to know
+  --    its position, then we can extrapolate our position.
 
-  error("Horizontal array style is not yet implemented.", 0)
+  -- Check all sides to see if there is a turtle there.
+  local is_turtle_front, label_front = get_turtle_label("front")
+  local is_turtle_back, label_back = get_turtle_label("back")
+  local is_turtle_left, label_left = get_turtle_label("left")
+  local is_turtle_right, label_right = get_turtle_label("right")
+
+  local guideblock_type ---@type "top"|"left"?
+
+  --- Check if a guideblock is in the given direction.
+  --- @param override_data table<string, string>? The data to use for the check.
+  local function is_guideblock(override_data)
+    local is_block, block_data
+    if override_data then
+      is_block = true
+      block_data = override_data
+    else
+      is_block, block_data = turtle.inspect()
+    end
+
+    if is_block then
+      if block_data.name == TurmitorClient.guideblock_top then
+        guideblock_type = "top"
+        return true
+      elseif block_data.name == TurmitorClient.guideblock_left then
+        guideblock_type = "left"
+        return true
+      end
+    end
+
+    return false
+  end
+
+  -- On each empty side, check for a guideblock.
+
+  -- Face the right-most empty side.
+  local double = false
+  if not is_turtle_front and not is_turtle_left then
+    double = true
+  elseif not is_turtle_left and not is_turtle_back then
+    double = true
+    turtle.turnLeft()
+  elseif not is_turtle_back and not is_turtle_right then
+    double = true
+    turtle.turnLeft()
+    turtle.turnLeft()
+  elseif not is_turtle_right and not is_turtle_front then
+    double = true
+    turtle.turnRight()
+  end
+
+  if not double then
+    -- Face the only empty side.
+    if not is_turtle_front then
+      -- nothing, already facing the right way.
+    elseif not is_turtle_left then
+      turtle.turnLeft()
+    elseif not is_turtle_back then
+      turtle.turnLeft()
+      turtle.turnLeft()
+    elseif not is_turtle_right then
+      turtle.turnRight()
+    end
+  end
+
+  if is_guideblock() then
+    -- Facing a guideblock, are we at the top or left?
+    if guideblock_type == "top" then
+      -- We are at z=1.
+      -- Face left and check if there is a left guideblock.
+      turtle.turnLeft()
+      if is_guideblock()then
+        -- We are at x=1.
+        return 1, 1
+      end
+
+      -- if the front is not a guideblock, it should be a turtle.
+      if not get_turtle_label("front") then
+        error("No turtle in front of the turtle at z=1 while facing left of top guideblock.", 0)
+      end
+
+      -- Now we can just wait for that turtle to know its position, and we are
+      -- at x+1,1.
+      repeat
+        sleep(1)
+        label_front = peripheral.call("front", "getLabel")
+      until label_front:match(TURTLE_LABEL_MATCHER)
+    elseif guideblock_type == "left" then
+      -- we are at x=1.
+      -- Face right and check if there is a top guideblock.
+      turtle.turnRight()
+      if is_guideblock() then
+        -- We are at z=1.
+        return 1, 1
+      end
+
+      -- if the front is not a guideblock, it should be a turtle.
+      if not get_turtle_label("front") then
+        error("No turtle in front of the turtle at x=1 while facing right of left guideblock.", 0)
+      end
+
+      -- Now we can just wait for that turtle to know its position, and we are
+      -- at z+1,1.
+      repeat
+        sleep(1)
+        label_front = peripheral.call("front", "getLabel")
+      until label_front:match(TURTLE_LABEL_MATCHER)
+    else
+      error("Guideblock, but no guideblock? Curious. (this should never happen)", 0)
+    end
+  else
+    -- No guideblock, so we need to wait for two turtles to know their position.
+    repeat
+      sleep(1)
+      label_front = peripheral.call("front", "getLabel")
+      label_back = peripheral.call("back", "getLabel")
+      label_right = peripheral.call("right", "getLabel")
+      label_left = peripheral.call("left", "getLabel")
+
+      local known_count = (
+        (label_front and label_front:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
+        (label_back and label_back:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
+        (label_right and label_right:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
+        (label_left and label_left:match(TURTLE_LABEL_MATCHER) and 1 or 0)
+      )
+    until known_count >= 2
+
+    -- Now we can extrapolate our position.
+    -- The right-most turtle that knows its position we should take the 'z'
+    -- value from, and the left-most turtle we should take the 'x' value from.
+    if label_front and label_left then
+      local _, z = label_front:match(TURTLE_LABEL_MATCHER)
+      local x, _ = label_left:match(TURTLE_LABEL_MATCHER)
+      return x, z
+    elseif label_left and label_back then
+      local _, z = label_left:match(TURTLE_LABEL_MATCHER)
+      local x, _ = label_back:match(TURTLE_LABEL_MATCHER)
+      return x, z
+    elseif label_back and label_right then
+      local _, z = label_back:match(TURTLE_LABEL_MATCHER)
+      local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
+      return x, z
+    elseif label_right and label_front then
+      local _, z = label_right:match(TURTLE_LABEL_MATCHER)
+      local x, _ = label_front:match(TURTLE_LABEL_MATCHER)
+      return x, z
+    else
+      error("Could not extrapolate position from turtles.", 0)
+    end
+  end
+
+  error("Could not determine position of turtle.", 0)
 end
 
 --- Place a block of the given color.
