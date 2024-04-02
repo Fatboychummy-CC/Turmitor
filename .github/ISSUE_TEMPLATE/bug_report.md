@@ -7,15 +7,21 @@ assignees: fatboychummy
 
 ---
 
+## Issue location
+- [ ] Turmitor Server
+- [ ] Turmitor Client
+- [ ] Both of the above
+- [ ] Other
+- [ ] I do not know
+
 ## Describe the bug
 A clear and concise description of what the bug is.
 
 ## To Reproduce
 Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+1. Place turtles in specific array...
+2. Load clients...
+3. Watch turtles dance instead of drawing a terminal.
 
 ## Expected behavior
 A clear and concise description of what you expected to happen.
