@@ -25,8 +25,8 @@ local TurmitorChannels = {
 }
 
 --- Get the channel that a client should be listening on.
----@param char_x number The character-x position of the client.
----@param char_y number The character-y position of the client.
+---@param char_x number The character-x position of the client, should be zero-indexed.
+---@param char_y number The character-y position of the client, should be zero-indexed.
 ---@return number channel The channel that the client should be listening on.
 function TurmitorChannels.get_client_channel(char_x, char_y)
   expect(1, char_x, "number")
