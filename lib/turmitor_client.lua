@@ -74,7 +74,10 @@
   }
   ```
   Assuming the character's top-left position in `font.fbmp` is at 37, 16, and
-  the foreground color is white and the background color is black. 
+  the foreground color is white and the background color is black.
+
+  All communications between turmitor clients and server should have the field
+  "_turmitor" set to true, for easy filtering of other messages.
 ]]
 
 
@@ -791,9 +794,11 @@ local function listen_for_placements()
   while true do
     local event, side, _channel, _reply_channel, message = os.pullEvent("modem_message")
 
-    if type(message) == "table" then
+    if type(message) == "table" and message._turmitor then
+      client_comms.debug(("Received turmitor message (action: %s)."):format(message.action))
       if _channel == TurmitorClient.control_channel then
         if message.action == "character" then
+          client_comms.debug("Received character message.")
           queue_block_using_font(
             message.data.char_x,
             message.data.char_y,
@@ -807,6 +812,7 @@ local function listen_for_placements()
             if order.x == TurmitorClient.position.x
               and order.z == TurmitorClient.position.z then
               TurmitorClient.queue_block(order.color)
+              client_comms.debug("Order is for us.")
               break
             end
           end
@@ -815,19 +821,26 @@ local function listen_for_placements()
           if message.data.x == TurmitorClient.position.x
             and message.data.z == TurmitorClient.position.z then
             TurmitorClient.queue_block(message.data.color)
+            client_comms.debug("Order is for us.")
+          else
+            client_comms.debug("Not for us.")
           end
         end
       elseif _channel == TurmitorChannels.CHANNEL_ALL then
         if message.action == "clear" then
+          client_comms.info("Received clear message of color", message.data.color)
           place_block(message.data.color)
         elseif message.action == "reset" then
+          client_comms.warn("Received reset message.")
           reset()
         elseif message.action == "get-size" then
           if TurmitorClient.is_bottom_right_corner then
+            client_comms.info("Received get-size message, responding.")
             smn.transmit(
               TurmitorChannels.CHANNEL_TURTLE_REPLY,
               TurmitorClient.control_channel,
               {
+                _turmitor = true,
                 action = "size",
                 data = {
                   x = TurmitorClient.position.char_x + 1,
@@ -844,8 +857,6 @@ end
 
 --- "Redraw" coroutine which continuously checks if the turtle needs to place a new colored block.
 local function redraw()
-  client_main.info("Redrawing screen.")
-
   while true do
     while TurmitorClient.color_want do
       local color_want = TurmitorClient.color_want
