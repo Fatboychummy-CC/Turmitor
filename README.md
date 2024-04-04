@@ -99,8 +99,11 @@ you do this does not matter, just make sure to get them all!
 **4. Which way is up?**
 
 The turtles do not know what direction they are facing, so determine where the
-"top" of your Turmitor should be, and place polished andesite beside the turtles
-to indicate this.
+"top" of your Turmitor should be, and place polished andesite beside those
+turtles to indicate this. Place polished diorite beside the "left" turtles. With
+the andesite and diorite, the turtles will be able to orient themselves. Once
+the setup is complete, these blocks can be removed, though they will need to be
+replaced if you wish to resize the Turmitor.
 
 <details><summary>Polished Andesite placed along the "top"</summary>
 
