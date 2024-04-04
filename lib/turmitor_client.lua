@@ -86,7 +86,6 @@ end
 -- Import libraries
 local expect = require "cc.expect".expect
 local logging = require "logging"
-local thready = require "thready" -- We may just use the builtin `parallel` instead. Will look into it.
 local smn = require "single_modem_network"
 local file_helper = require "file_helper"
 local read_fbmp = require "read_fbmp"
