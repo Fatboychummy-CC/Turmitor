@@ -89,7 +89,7 @@ local logging = require "logging"
 local smn = require "single_modem_network"
 local file_helper = require "file_helper"
 local read_fbmp = require "read_fbmp"
-local turmitor_channels = require "turmitor_channels"
+local TurmitorChannels = require "turmitor_channels"
 
 -- Setup libraries
 
@@ -785,7 +785,7 @@ local function listen_for_placements()
   client_main.info("Listening for placements.")
   client_main.info(("Control channel: %d | All channel: %d"):format(
     TurmitorClient.control_channel,
-    turmitor_channels.CHANNEL_ALL
+    TurmitorChannels.CHANNEL_ALL
   ))
 
   while true do
@@ -817,7 +817,7 @@ local function listen_for_placements()
             TurmitorClient.queue_block(message.data.color)
           end
         end
-      elseif _channel == turmitor_channels.CHANNEL_ALL then
+      elseif _channel == TurmitorChannels.CHANNEL_ALL then
         if message.action == "clear" then
           place_block(message.data.color)
         elseif message.action == "reset" then
@@ -825,7 +825,7 @@ local function listen_for_placements()
         elseif message.action == "get-size" then
           if TurmitorClient.is_bottom_right_corner then
             smn.transmit(
-              turmitor_channels.CHANNEL_TURTLE_REPLY,
+              TurmitorChannels.CHANNEL_TURTLE_REPLY,
               TurmitorClient.control_channel,
               {
                 action = "size",
@@ -881,7 +881,7 @@ function TurmitorClient.set_position(x, z)
     TurmitorClient.position.inner_z
   ))
 
-  TurmitorClient.control_channel = turmitor_channels.get_client_channel(
+  TurmitorClient.control_channel = TurmitorChannels.get_client_channel(
     TurmitorClient.position.char_x,
     TurmitorClient.position.char_z
   )
