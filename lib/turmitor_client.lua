@@ -278,7 +278,7 @@ local function reset()
   client_main.warn("Resetting turmitor data.")
   data_folder:delete("turmitor_data.lson")
   os.setComputerLabel()
-  os.reboot()
+  os.shutdown()
 end
 
 --- Load data from the configuration file, if it exists.
