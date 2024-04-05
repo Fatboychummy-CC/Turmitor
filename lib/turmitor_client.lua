@@ -273,6 +273,14 @@ local function setup_font()
   TurmitorClient.font = font
 end
 
+--- Reset the turmitor data.
+local function reset()
+  client_main.warn("Resetting turmitor data.")
+  data_folder:delete("turmitor_data.lson")
+  os.setComputerLabel()
+  os.reboot()
+end
+
 --- Load data from the configuration file, if it exists.
 --- On failure, determine the position of the turtle in the grid.
 local function load()
@@ -286,6 +294,9 @@ local function load()
   if position_data.x == -1 or position_data.z == -1 then
     client_main.debug("Loaded data was unknown, determining position.")
     TurmitorClient.determine_position()
+  elseif not position_data.x or not position_data.z then
+    client_main.fatal("Loaded data was invalid, resetting.")
+    reset()
   else
     TurmitorClient.set_position(position_data.x, position_data.z)
   end
@@ -301,14 +312,6 @@ local function save()
 
   -- And set the label
   os.setComputerLabel(("%d,%d"):format(TurmitorClient.position.x, TurmitorClient.position.z))
-end
-
---- Reset the turmitor data.
-local function reset()
-  client_main.warn("Resetting turmitor data.")
-  data_folder:delete("turmitor_data.lson")
-  os.setComputerLabel()
-  os.reboot()
 end
 
 --- Return the items in a slot to the inventory. Keeps trying until successful,
@@ -543,12 +546,17 @@ local function _determine_vertical()
     end
 
     local x, z = label_right:match(TURTLE_LABEL_MATCHER)
+    x, z = tonumber(x), tonumber(z)
     if x and z then
       return x + 1, z
     end
 
     x, z = label_up:match(TURTLE_LABEL_MATCHER)
-    return x, z + 1
+    x, z = tonumber(x), tonumber(z)
+    if x and z then
+      return x, z + 1
+    end
+    error("Could not determine position of turtle in vertical array style (1).", 0)
   end
 
   -- Only a turtle in front.
@@ -560,7 +568,11 @@ local function _determine_vertical()
     end
 
     local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
-    return x + 1, 1
+    x = tonumber(x)
+    if x then
+      return x + 1, 1
+    end
+    error("Could not determine position of turtle in vertical array style (2).", 0)
   end
 
   -- Only a turtle above.
@@ -572,7 +584,11 @@ local function _determine_vertical()
     end
 
     local _, z = label_up:match(TURTLE_LABEL_MATCHER)
-    return 1, z + 1
+    z = tonumber(z)
+    if z then
+      return 1, z + 1
+    end
+    error("Could not determine position of turtle in vertical array style (3).", 0)
   end
 
   -- No turtles in front or above.
@@ -683,6 +699,8 @@ local function _determine_horizontal()
         sleep(1)
         label_front = peripheral.call("front", "getLabel")
       until label_front:match(TURTLE_LABEL_MATCHER)
+
+      ---@fixme this is unfinished
     elseif guideblock_type == "left" then
       -- we are at x=1.
       -- Face right and check if there is a top guideblock.
@@ -703,6 +721,8 @@ local function _determine_horizontal()
         sleep(1)
         label_front = peripheral.call("front", "getLabel")
       until label_front:match(TURTLE_LABEL_MATCHER)
+
+      ---@fixme this is unfinished
     else
       error("Guideblock, but no guideblock? Curious. (this should never happen)", 0)
     end
@@ -729,22 +749,33 @@ local function _determine_horizontal()
     if label_front and label_left then
       local _, z = label_front:match(TURTLE_LABEL_MATCHER)
       local x, _ = label_left:match(TURTLE_LABEL_MATCHER)
-      return x, z
+      x, z = tonumber(x), tonumber(z)
+      if x and z then
+        return x, z
+      end
     elseif label_left and label_back then
       local _, z = label_left:match(TURTLE_LABEL_MATCHER)
       local x, _ = label_back:match(TURTLE_LABEL_MATCHER)
-      return x, z
+      x, z = tonumber(x), tonumber(z)
+      if x and z then
+        return x, z
+      end
     elseif label_back and label_right then
       local _, z = label_back:match(TURTLE_LABEL_MATCHER)
       local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
-      return x, z
+      x, z = tonumber(x), tonumber(z)
+      if x and z then
+        return x, z
+      end
     elseif label_right and label_front then
       local _, z = label_right:match(TURTLE_LABEL_MATCHER)
       local x, _ = label_front:match(TURTLE_LABEL_MATCHER)
-      return x, z
-    else
-      error("Could not extrapolate position from turtles.", 0)
+      x, z = tonumber(x), tonumber(z)
+      if x and z then
+        return x, z
+      end
     end
+    error("Could not extrapolate position from turtles.", 0)
   end
 
   error("Could not determine position of turtle.", 0)
@@ -966,6 +997,13 @@ function TurmitorClient.run()
   client_main.info("Initializing Turmitor Client.")
 
   check_orientation()
+
+  if TurmitorClient.array_style == "horizontal" then
+    smn.set_modem("bottom")
+  elseif TurmitorClient.array_style == "vertical" then
+    smn.set_modem("back")
+  end
+
   load()
   setup_font()
   get_blocks()
