@@ -535,13 +535,15 @@ local function _determine_vertical()
   -- Turtle in front AND above.
   if is_turtle_right and is_turtle_up then
     -- Wait until both turtles know their position.
-    while not label_up:match(TURTLE_LABEL_MATCHER) or not label_right:match(TURTLE_LABEL_MATCHER) do
+    while not label_up or not label_up:match(TURTLE_LABEL_MATCHER)
+    or not label_right or not label_right:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
       label_right = peripheral.call("right", "getLabel")
       label_up = peripheral.call("top", "getLabel")
     end
 
     if not get_turtle_label("bottom") and not get_turtle_label("left") then
+      client_main.info("Turtle is in the bottom-right corner.")
       TurmitorClient.is_bottom_right_corner = true
     end
 
@@ -562,7 +564,7 @@ local function _determine_vertical()
   -- Only a turtle in front.
   if is_turtle_right then
     -- Wait until the turtle in front knows its position.
-    while not label_right:match(TURTLE_LABEL_MATCHER) do
+    while not label_right or not label_right:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
       label_right = peripheral.call("right", "getLabel")
     end
@@ -578,7 +580,7 @@ local function _determine_vertical()
   -- Only a turtle above.
   if is_turtle_up then
     -- Wait until the turtle above knows its position.
-    while not label_up:match(TURTLE_LABEL_MATCHER) do
+    while not label_up or not label_up:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
       label_up = peripheral.call("top", "getLabel")
     end
@@ -698,7 +700,7 @@ local function _determine_horizontal()
       repeat
         sleep(1)
         label_front = peripheral.call("front", "getLabel")
-      until label_front:match(TURTLE_LABEL_MATCHER)
+      until label_front and label_front:match(TURTLE_LABEL_MATCHER)
 
       ---@fixme this is unfinished
     elseif guideblock_type == "left" then
@@ -720,7 +722,7 @@ local function _determine_horizontal()
       repeat
         sleep(1)
         label_front = peripheral.call("front", "getLabel")
-      until label_front:match(TURTLE_LABEL_MATCHER)
+      until label_front and label_front:match(TURTLE_LABEL_MATCHER)
 
       ---@fixme this is unfinished
     else
