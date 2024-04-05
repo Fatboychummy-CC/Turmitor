@@ -1012,6 +1012,7 @@ end
 function TurmitorClient.run()
   client_main.info("Initializing Turmitor Client.")
 
+  load()
   check_orientation()
 
   if TurmitorClient.array_style == "horizontal" then
@@ -1020,7 +1021,6 @@ function TurmitorClient.run()
     smn.set_modem("back")
   end
 
-  load()
   setup_font()
   get_blocks()
   determine_bottom_right_corner()
