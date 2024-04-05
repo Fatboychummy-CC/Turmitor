@@ -157,7 +157,7 @@ function TurmitorServer.shutdown()
 
   for i, turtle in ipairs(turtles) do
     main_context.debug("Shutting down turtle", i)
-    turtle.turnOff()
+    turtle.shutdown()
   end
 end
 
@@ -279,12 +279,16 @@ function TurmitorServer.get_size(max_time)
   expect(1, max_time, "number", "nil")
   max_time = max_time or 5
 
+  local getsize_context = logging.create_context("get_size")
+  getsize_context.info("Getting size of the array.")
+
   local _, response
 
   parallel.waitForAny(
     function()
       -- Loop sending the request.
       while true do
+        getsize_context.debug("Sending size request.")
         smn.transmit(
           TurmitorChannels.CHANNEL_ALL,
           TurmitorChannels.CHANNEL_TURTLE_REPLY,
@@ -304,7 +308,10 @@ function TurmitorServer.get_size(max_time)
       while true do
         local _, side, _, _, message = os.pullEvent("modem_message")
 
+        getsize_context.debug("Received message:", message)
+
         if side == modem and type(message) == "table" and message._turmitor and message.action == "size" then
+          getsize_context.info("Received size response.")
           response = message.data
           break
         end
@@ -317,8 +324,11 @@ function TurmitorServer.get_size(max_time)
   )
 
   if response.x and response.z then
+    getsize_context.info("Received size:", response.x, response.z)
     TurmitorServer.array_size.x = response.x
     TurmitorServer.array_size.z = response.z
+  else
+    getsize_context.warn("Did not receive size response.")
   end
 
   return response.x or 0, response.z or 0
