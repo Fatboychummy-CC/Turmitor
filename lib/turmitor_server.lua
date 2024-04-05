@@ -549,30 +549,30 @@ function TurmitorServer.get_redirect()
     local new_buffer = {}
 
     -- initialization
-    for x = 1, size.x do
-      new_buffer[x] = {}
+    for y = 1, size.y do
+      new_buffer[y] = {}
 
-      for z = 1, size.y do
-        new_buffer[x][z] = {char = " ", fg = text_color, bg = background_color}
+      for x = 1, size.x do
+        new_buffer[y][x] = {char = " ", fg = text_color, bg = background_color}
       end
     end
 
     -- copy the old buffer to the new buffer, with the y offset.
-    for x = 1, size.x do
-      for z = 1, size.y do
-        local new_z = z + lines
-        if new_z > 0 and new_z <= size.y then
-          new_buffer[x][new_z] = buffer_1[x][z]
+    for y = 1, size.y do
+      local new_y = y + lines
+      for x = 1, size.x do
+        if new_y >= 1 and new_y <= size.y then
+          new_buffer[y][new_y] = buffer_1[y][x]
         end
       end
     end
 
     if auto_update then
       -- immediately order the scroll.
-      for x = 1, size.x do
-        for z = 1, size.y do
-          local char = new_buffer[x][z]
-          TurmitorServer.set_character(x, z, inverted_colors[char.fg], inverted_colors[char.bg], char.char)
+      for y = 1, size.y do
+        for x = 1, size.x do
+          local char = new_buffer[y][x]
+          TurmitorServer.set_character(x, y, inverted_colors[char.fg], inverted_colors[char.bg], char.char)
         end
       end
     end
