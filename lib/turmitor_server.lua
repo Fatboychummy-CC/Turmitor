@@ -539,6 +539,7 @@ function TurmitorServer.get_redirect()
   function redirect.isColor()
     return true
   end
+  redirect.isColour = redirect.isColor
 
   --- Scroll the screen. Positive scrolls up, negative scrolls down.
   function redirect.scroll(lines)
