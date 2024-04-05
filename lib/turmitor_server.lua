@@ -136,32 +136,81 @@ function TurmitorServer.set_modem(modem_name)
 end
 
 --- Restart all connected turtles.
-function TurmitorServer.restart()
+---@param shutdown_batch_size number? The number of turtles to shut down at once, defaults to 100.
+---@param shutdown_batch_time number? The time to wait between shutting down each batch of turtles, defaults to 5 seconds.
+---@param startup_batch_size number? The number of turtles to start at once, defaults to 100.
+---@param startup_batch_time number? The time to wait between starting each batch of turtles, defaults to 5 seconds.
+function TurmitorServer.restart(shutdown_batch_size, shutdown_batch_time, startup_batch_size, startup_batch_time)
+  expect(1, shutdown_batch_size, "number", "nil")
+  expect(2, shutdown_batch_time, "number", "nil")
+  expect(3, startup_batch_size, "number", "nil")
+  expect(4, startup_batch_time, "number", "nil")
+  shutdown_batch_size = shutdown_batch_size or 100
+  shutdown_batch_time = shutdown_batch_time or 5
+  startup_batch_size = startup_batch_size or 100
+  startup_batch_time = startup_batch_time or 5
+
   main_context.info("Restarting all connected turtles.")
-  TurmitorServer.shutdown()
+  TurmitorServer.shutdown(shutdown_batch_size, shutdown_batch_time)
   sleep(1)
-  TurmitorServer.startup()
+  TurmitorServer.startup(startup_batch_size, startup_batch_time)
 end
 
 --- Start all connected turtles.
-function TurmitorServer.startup()
+---@param batch_size number? The number of turtles to start at once, defaults to 100.
+---@param batch_time number? The time to wait between starting each batch of turtles, defaults to 5 seconds.
+function TurmitorServer.startup(batch_size, batch_time)
+  expect(1, batch_size, "number", "nil")
+  expect(2, batch_time, "number", "nil")
+  batch_size = batch_size or 100
+  batch_time = batch_time or 5
+
   main_context.info("Starting up all connected turtles.")
   local turtles = table.pack(smn.find("turtle"))
 
-  for i, turtle in ipairs(turtles) do
-    main_context.debug("Starting up turtle", i)
-    turtle.turnOn()
+  for i = 1, #turtles, batch_size do
+    for j = 1, batch_size do
+      local turtle = turtles[i + j - 1]
+      if not turtle then
+        break
+      end
+
+      main_context.debug("Starting up turtle", i + j - 1)
+      turtle.turnOn()
+    end
+
+    main_context.debug("End of batch", (i - 1) / batch_size + 1, "- waiting", batch_time, "seconds.")
+
+    sleep(batch_time)
   end
 end
 
 --- Shutdown all connected turtles.
-function TurmitorServer.shutdown()
+---@param batch_size number? The number of turtles to shut down at once, defaults to 100.
+---@param batch_time number? The time to wait between shutting down each batch of turtles, defaults to 5 seconds.
+function TurmitorServer.shutdown(batch_size, batch_time)
+  expect(1, batch_size, "number", "nil")
+  expect(2, batch_time, "number", "nil")
+  batch_size = batch_size or 100
+  batch_time = batch_time or 5
+
   main_context.info("Shutting down all connected turtles.")
   local turtles = table.pack(smn.find("turtle"))
 
-  for i, turtle in ipairs(turtles) do
-    main_context.debug("Shutting down turtle", i)
-    turtle.shutdown()
+  for i = 1, #turtles, batch_size do
+    for j = 1, batch_size do
+      local turtle = turtles[i + j - 1]
+      if not turtle then
+        break
+      end
+
+      main_context.debug("Shutting down turtle", i + j - 1)
+      turtle.shutdown()
+    end
+
+    main_context.debug("End of batch", (i - 1) / batch_size + 1, "- waiting", batch_time, "seconds.")
+
+    sleep(batch_time)
   end
 end
 
