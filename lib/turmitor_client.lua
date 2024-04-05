@@ -52,6 +52,8 @@
       - z: number The z position of the turtle.
       - color: valid_colors The color of the block to place.
   - clear: Have all turtles clear the screen.
+    - data: table
+      - color: valid_colors The color to clear the screen with.
   - reset: Have all turtles reset their position data.
 
   Clients will respond for the following actions:
@@ -194,6 +196,31 @@ local TurmitorClient = {
 }
 
 -- Private (local) functions
+
+--- Wipe the event queue.
+local function wipe_queue()
+  os.queueEvent("__queue_end")
+  for i = 1, math.huge do
+    local ev = os.pullEvent()
+    if ev == "__queue_end" then break end
+    if i % 128 == 0 then os.queueEvent("__queue_end") end
+  end
+end
+
+--- Turn the turtle to the left in a safe way that doesn't stall on too many events.
+local function turn_left()
+  coroutine.resume(coroutine.create(turtle.turnLeft))
+  wipe_queue()
+  sleep(0.5)
+end
+
+--- Turn the turtle to the right in a safe way that doesn't stall on too many events.
+local function turn_right()
+  coroutine.resume(coroutine.create(turtle.turnRight))
+  wipe_queue()
+  sleep(0.5)
+end
+
 
 --- Count the length of a dictionary style table.
 ---@param tbl table The table to count the length of.
@@ -495,7 +522,7 @@ local function _determine_vertical()
 
   -- Rotate so the modem is behind us.
   while not peripheral.hasType("back", "modem") do
-    turtle.turnRight()
+    turn_right()
   end
 
   -- Check if a turtle is in front or above.
@@ -610,14 +637,14 @@ local function _determine_horizontal()
     double = true
   elseif not is_turtle_left and not is_turtle_back then
     double = true
-    turtle.turnLeft()
+    turn_left()
   elseif not is_turtle_back and not is_turtle_right then
     double = true
-    turtle.turnLeft()
-    turtle.turnLeft()
+    turn_left()
+    turn_left()
   elseif not is_turtle_right and not is_turtle_front then
     double = true
-    turtle.turnRight()
+    turn_right()
   end
 
   if not double then
@@ -625,12 +652,12 @@ local function _determine_horizontal()
     if not is_turtle_front then
       -- nothing, already facing the right way.
     elseif not is_turtle_left then
-      turtle.turnLeft()
+      turn_left()
     elseif not is_turtle_back then
-      turtle.turnLeft()
-      turtle.turnLeft()
+      turn_left()
+      turn_left()
     elseif not is_turtle_right then
-      turtle.turnRight()
+      turn_right()
     end
   end
 
@@ -639,7 +666,7 @@ local function _determine_horizontal()
     if guideblock_type == "top" then
       -- We are at z=1.
       -- Face left and check if there is a left guideblock.
-      turtle.turnLeft()
+      turn_left()
       if is_guideblock()then
         -- We are at x=1.
         return 1, 1
@@ -659,7 +686,7 @@ local function _determine_horizontal()
     elseif guideblock_type == "left" then
       -- we are at x=1.
       -- Face right and check if there is a top guideblock.
-      turtle.turnRight()
+      turn_right()
       if is_guideblock() then
         -- We are at z=1.
         return 1, 1
