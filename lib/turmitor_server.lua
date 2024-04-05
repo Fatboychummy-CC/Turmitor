@@ -129,6 +129,10 @@ end
 ---@param modem_name computerSide The side of the computer the modem is on.
 function TurmitorServer.set_modem(modem_name)
   smn.set_modem(modem_name)
+
+  smn.closeAll()
+  smn.open(TurmitorChannels.CHANNEL_ERROR)
+  smn.open(TurmitorChannels.CHANNEL_TURTLE_REPLY)
 end
 
 --- Restart all connected turtles.

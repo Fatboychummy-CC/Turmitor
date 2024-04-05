@@ -504,6 +504,17 @@ local function get_turtle_label(side)
   return false
 end
 
+local function determine_bottom_right_corner()
+  if TurmitorClient.array_style == "vertical" then
+    if not get_turtle_label("bottom") and not get_turtle_label("left") then
+      client_main.info("Turtle is in the bottom-right corner.")
+      TurmitorClient.is_bottom_right_corner = true
+    end
+  elseif TurmitorClient.array_style == "horizontal" then
+    ---@fixme implement this
+  end
+end
+
 --- Determine the position of the turtle in the grid, vertical style
 ---@return number x The x position of the turtle in the grid.
 ---@return number z The z position of the turtle in the grid.
@@ -540,11 +551,6 @@ local function _determine_vertical()
       sleep(1)
       label_right = peripheral.call("right", "getLabel")
       label_up = peripheral.call("top", "getLabel")
-    end
-
-    if not get_turtle_label("bottom") and not get_turtle_label("left") then
-      client_main.info("Turtle is in the bottom-right corner.")
-      TurmitorClient.is_bottom_right_corner = true
     end
 
     local x, z = label_right:match(TURTLE_LABEL_MATCHER)
@@ -832,7 +838,7 @@ end
 ---@param bg valid_colors The background color of the character.
 local function queue_block_using_font(char_x, char_y, fg, bg)
   local used_x = char_x + TurmitorClient.position.inner_x
-  local used_y = char_y + TurmitorClient.position.inner_y
+  local used_y = char_y + TurmitorClient.position.inner_z
 
   if TurmitorClient.font[used_y] and TurmitorClient.font[used_y][used_x] then
     TurmitorClient.queue_block(fg)
@@ -843,7 +849,7 @@ end
 
 
 --- Coroutine which listens for messages stating what should be placed (or other actions that should be taken).
-local function listen_for_placements()
+local function listen_for_actions()
   local client_comms =  logging.create_context("comms")
   client_main.info("Listening for placements.")
   client_main.info(("Control channel: %d | All channel: %d"):format(
@@ -851,8 +857,14 @@ local function listen_for_placements()
     TurmitorChannels.CHANNEL_ALL
   ))
 
+  smn.closeAll()
+  smn.open(TurmitorClient.control_channel)
+  smn.open(TurmitorChannels.CHANNEL_ALL)
+
   while true do
     local event, side, _channel, _reply_channel, message = os.pullEvent("modem_message")
+
+    client_comms.debug(("Received message on channel %d."):format(_channel))
 
     if type(message) == "table" and message._turmitor then
       client_comms.debug(("Received turmitor message (action: %s)."):format(message.action))
@@ -908,6 +920,8 @@ local function listen_for_placements()
                 }
               }
             )
+          else
+            client_comms.info("Received get-size message, but not in bottom-right corner.")
           end
         end
       end
@@ -1009,6 +1023,7 @@ function TurmitorClient.run()
   load()
   setup_font()
   get_blocks()
+  determine_bottom_right_corner()
 
   client_main.info("Initialization complete. Placing black block.")
 
@@ -1016,8 +1031,11 @@ function TurmitorClient.run()
   place_block("black")
 
   client_main.info("Running main loops.")
+  if TurmitorClient.is_bottom_right_corner then
+    client_main.info("Turtle is in the bottom-right corner.")
+  end
   parallel.waitForAny(
-    listen_for_placements,
+    listen_for_actions,
     redraw
   )
 end
