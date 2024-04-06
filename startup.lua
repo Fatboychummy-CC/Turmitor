@@ -19,4 +19,11 @@ local turmitor_client = require "turmitor_client"
 -- turmitor_client.array_style = "horizontal"
 --- 
 -- Run the Turmitor client.
-turmitor_client.run()
+local ok, err = pcall(
+  turmitor_client.run
+)
+
+if not ok then
+  logging.create_context("startup.lua").error(err)
+  logging.dump_log("log.txt")
+end
