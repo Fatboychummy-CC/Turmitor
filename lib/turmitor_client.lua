@@ -1024,34 +1024,59 @@ end
 
 --- Run the Turmitor Client.
 function TurmitorClient.run()
-  client_main.info("Initializing Turmitor Client.")
+  local ok, err = pcall(function()
+    client_main.info("Initializing Turmitor Client.")
 
-  load()
-  check_orientation()
+    load()
+    check_orientation()
 
-  if TurmitorClient.array_style == "horizontal" then
-    smn.set_modem("bottom")
-  elseif TurmitorClient.array_style == "vertical" then
-    smn.set_modem("back")
+    if TurmitorClient.array_style == "horizontal" then
+      smn.set_modem("bottom")
+    elseif TurmitorClient.array_style == "vertical" then
+      smn.set_modem("back")
+    end
+
+    setup_font()
+    get_blocks()
+    determine_bottom_right_corner()
+
+    client_main.info("Initialization complete. Placing black block.")
+
+    -- Ensure that the screen is blank.
+    place_block("black")
+
+    client_main.info("Running main loops.")
+    if TurmitorClient.is_bottom_right_corner then
+      client_main.info("Turtle is in the bottom-right corner.")
+    end
+    parallel.waitForAny(
+      listen_for_actions,
+      redraw
+    )
+  end)
+
+  if not ok then
+    client_main.fatal(err)
+
+    -- Transmit the error to the server.
+    local ok_get_name, local_name = pcall(smn.getNameLocal)
+    
+    pcall(smn.transmit,
+      TurmitorChannels.CHANNEL_ERROR,
+      0,
+      {
+        _turmitor = true,
+        action = "error",
+        data = {
+          message = err,
+          turtle_id = os.getComputerID(),
+          local_name = ok_get_name and local_name or "unknown: " .. tostring(local_name),
+        }
+      }
+    )
+
+    error(err, 0)
   end
-
-  setup_font()
-  get_blocks()
-  determine_bottom_right_corner()
-
-  client_main.info("Initialization complete. Placing black block.")
-
-  -- Ensure that the screen is blank.
-  place_block("black")
-
-  client_main.info("Running main loops.")
-  if TurmitorClient.is_bottom_right_corner then
-    client_main.info("Turtle is in the bottom-right corner.")
-  end
-  parallel.waitForAny(
-    listen_for_actions,
-    redraw
-  )
 end
 
 return TurmitorClient

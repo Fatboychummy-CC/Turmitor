@@ -402,6 +402,29 @@ function TurmitorServer.get_size_cached()
   return TurmitorServer.array_size.x, TurmitorServer.array_size.z
 end
 
+--- Listen for turtle errors. This method is meant to be used in parallel with
+--- your main program, mainly for logging purposes. It is NOT required to be run
+--- at all, but if any turtles error this will let you know from the controller.
+---
+--- This method assumes you have called `TurmitorServer.set_modem`.
+---@see TurmitorServer.set_modem
+function TurmitorServer.listen_for_errors()
+  local error_context = logging.create_context("error_listener")
+
+  local modem_name = smn.get_modem()
+
+  while true do
+    local _, side, _, _, message = os.pullEvent("modem_message")
+
+    if side == modem_name and type(message) == "table"
+    and message._turmitor and message.action == "error" then
+      error_context.error("Turtle error:", message.message)
+      error_context.error("      Turtle:", message.turtle_id)
+      error_context.error("  Local name:", message.local_name)
+    end
+  end
+end
+
 --- Get an object that can be used like a terminal object (i.e: for `term.redirect`).
 ---@return TurmitorRedirect redirect The window-like redirect object.
 function TurmitorServer.get_redirect()
