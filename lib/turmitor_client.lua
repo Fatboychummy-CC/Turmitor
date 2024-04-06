@@ -915,7 +915,7 @@ local function listen_for_actions()
       elseif _channel == TurmitorChannels.CHANNEL_ALL then
         if message.action == "clear" then
           client_comms.info("Received clear message of color", message.data.color)
-          place_block(message.data.color)
+          TurmitorClient.queue_block(message.data.color)
         elseif message.action == "reset" then
           client_comms.warn("Received reset message.")
           reset()
