@@ -449,10 +449,6 @@ function TurmitorServer.get_redirect()
   --- is then updated with the new contents.
   local buffer_2 = {}
 
-  --- If this boolean is true, the next redraw will force a full screen update
-  --- instead of computing the differences between the two buffers.
-  local buffers_dirty = false
-
   --- If this is true, instead of waiting for `.flush()` to be called, the
   --- screen will be updated on every call to a drawing function. Only buffer 1
   --- is used in this mode, so that we can do operations like scrolling.
@@ -486,8 +482,6 @@ function TurmitorServer.get_redirect()
         buffer_2[y][x] = {char = " ", fg = colors.white, bg = colors.black}
       end
     end
-
-    buffers_dirty = true
   end
   setup_buffers()
 
@@ -527,13 +521,17 @@ function TurmitorServer.get_redirect()
 
 
   --- Blit multiple characters and colors at once to the screen.
-  function redirect.blit(text, textColor, backgroundColor)
+  ---@param text string The text to blit.
+  ---@param _text_color string The text color string.
+  ---@param _background_color string The background color string.
+  ---@deprecated Not actually deprecated, but this method is not yet implemented and I want LLS to generate a warning if it gets used.
+  function redirect.blit(text, _text_color, _background_color)
     expect(1, text, "string")
-    expect(2, textColor, "string")
-    expect(3, backgroundColor, "string")
+    expect(2, _text_color, "string")
+    expect(3, _background_color, "string")
 
     -- Ensure all inputs are the same length
-    if #textColor ~= #text or #backgroundColor ~= #text then
+    if #_text_color ~= #text or #_background_color ~= #text then
       error("All inputs must be the same length.", 2)
     end
 
@@ -599,6 +597,7 @@ function TurmitorServer.get_redirect()
   redirect.isColour = redirect.isColor
 
   --- Scroll the screen. Positive scrolls up, negative scrolls down.
+  ---@param lines number The number of lines to scroll.
   function redirect.scroll(lines)
     expect(1, lines, "number")
 
@@ -664,6 +663,7 @@ function TurmitorServer.get_redirect()
   end
 
   --- Set the background color.
+  ---@param color color The color to set the background to.
   function redirect.setBackgroundColor(color)
     expect(1, color, "number")
 
@@ -672,6 +672,7 @@ function TurmitorServer.get_redirect()
   redirect.setBackgroundColour = redirect.setBackgroundColor
 
   --- Set the text color.
+  ---@param color color The color to set the text to.
   function redirect.setTextColor(color)
     expect(1, color, "number")
 
@@ -680,6 +681,8 @@ function TurmitorServer.get_redirect()
   redirect.setTextColour = redirect.setTextColor
 
   --- Set the cursor position.
+  ---@param x number The x position of the cursor.
+  ---@param y number The y position of the cursor.
   function redirect.setCursorPos(x, y)
     expect(1, x, "number")
     expect(2, y, "number")
@@ -689,8 +692,9 @@ function TurmitorServer.get_redirect()
   end
 
   --- Write text to the screen.
-  function redirect.write(text)
-    expect(1, text, "string")
+  ---@param value any The value to write to the screen.
+  function redirect.write(value)
+    value = tostring(value)
 
     if cursor_x > size.x or cursor_y > size.y or cursor_y < 1 then
       -- Nothing needs to be updated, cursor is off screen.
@@ -702,24 +706,24 @@ function TurmitorServer.get_redirect()
 
     if auto_update then
       -- immediately order the text to be written.
-      for i = 1, #text do
+      for i = 1, #value do
         local x_pos = cursor_x + i - 1
         if x_pos <= size.x and x_pos > 0 then
-          TurmitorServer.set_character(cursor_x + i - 1, cursor_y, inverted_colors[text_color], inverted_colors[background_color], text:sub(i, i))
+          TurmitorServer.set_character(cursor_x + i - 1, cursor_y, inverted_colors[text_color], inverted_colors[background_color], value:sub(i, i))
         end
       end
     end
 
     -- update the buffer.
-    for i = 1, #text do
+    for i = 1, #value do
       local x_pos = cursor_x + i - 1
       if x_pos <= size.x and x_pos > 0 then
-        buffer_1[cursor_y][x_pos] = {char = text:sub(i, i), fg = text_color, bg = background_color}
+        buffer_1[cursor_y][x_pos] = {char = value:sub(i, i), fg = text_color, bg = background_color}
       end
     end
 
     -- Update the cursor position to the end of the text.
-    cursor_x = cursor_x + #text
+    cursor_x = cursor_x + #value
   end
 
   --- Get the cursor blink state.
@@ -728,6 +732,7 @@ function TurmitorServer.get_redirect()
   end
 
   --- Set the cursor blink state.
+  ---@param blink boolean Whether or not the cursor should blink.
   function redirect.setCursorBlink(blink)
     expect(1, blink, "boolean")
 
