@@ -121,6 +121,17 @@ local function send_to_character(x, y, action, data)
   )
 end
 
+--- Convert a color from blit to a color that can be used by the turmitor server.
+---@param hex string The blit color to convert.
+---@return valid_colors? valid_color The converted color, or nil if the color is invalid.
+local function from_blit(hex)
+  if #hex ~= 1 then return end
+  local n = tonumber(hex, 16)
+  if not n then return end
+
+  return inverted_colors[2^n]
+end
+
 
 -- Public methods
 
@@ -558,7 +569,68 @@ function TurmitorServer.get_redirect()
       error("All inputs must be the same length.", 2)
     end
 
-    -- Skeleton
+    if cursor_x > size.x or cursor_y > size.y or cursor_y < 1 then
+      -- Nothing needs to be updated, cursor is off screen.
+      -- Note we don't compare cursor_x < 1, as it's possible to have the cursor
+      -- be off to the left of the screen and have text that eventually runs
+      -- back onto the screen.
+
+      -- HOWEVER, we should still offset the cursor to the right by the length
+      -- of the text. I don't see any point where someone's could would *rely*
+      -- on this behaviour, but... it's possible.
+      cursor_x = cursor_x + #text
+      return
+    end
+
+    -- Convert all inputs to lowercase, so users can use any case.
+    _text_color = _text_color:lower()
+    _background_color = _background_color:lower()
+
+    local orders = {}
+
+    for i = 1, #text do
+      -- Convert current text color and background color from blit.
+      local fg = from_blit(_text_color:sub(i, i))
+      local bg = from_blit(_background_color:sub(i, i))
+
+      -- From some short analysis, it looks like this is how blit is treated
+      -- when given a character that isn't hex.
+      -- Not sure if this is exactly how it works, but until someone yells at me
+      -- for doing it wrong, this will be how it be.
+      if not fg then
+        fg = "white"
+      end
+      if not bg then
+        bg = "black"
+      end
+
+      -- Add the order to the orders table, but only if on screen.
+      local x_pos = cursor_x + i - 1
+      if x_pos <= size.x and x_pos > 0 then
+        table.insert(orders, {
+          x = x_pos,
+          y = cursor_y,
+          fg = fg,
+          bg = bg,
+          char = text:sub(i, i)
+        })
+      end
+    end
+
+    if auto_update then
+      -- For each order, set the character.
+      for _, order in ipairs(orders) do
+        TurmitorServer.set_character(order.x, order.y, order.fg, order.bg, order.char)
+      end
+    end
+
+    -- Update the buffer with the new characters.
+    for _, order in ipairs(orders) do
+      buffer_1[order.y][order.x] = {char = order.char, fg = order.fg, bg = order.bg}
+    end
+
+    -- Update the cursor position.
+    cursor_x = cursor_x + #text
   end
 
   --- Clear the screen.
@@ -724,6 +796,11 @@ function TurmitorServer.get_redirect()
       -- Note we don't compare cursor_x < 1, as it's possible to have the cursor
       -- be off to the left of the screen and have text that eventually runs
       -- back onto the screen.
+
+      -- HOWEVER, we should still offset the cursor to the right by the length
+      -- of the text. I don't see any point where someone's could would *rely*
+      -- on this behaviour, but... it's possible.
+      cursor_x = cursor_x + #value
       return
     end
 
@@ -770,6 +847,11 @@ function TurmitorServer.get_redirect()
   --- Force updates on every call, instead of when flush is called.
   function redirect.auto_update()
     auto_update = true
+  end
+
+  --- Disable automatic updates.
+  function redirect.manual_update()
+    auto_update = false
   end
 
   return redirect
