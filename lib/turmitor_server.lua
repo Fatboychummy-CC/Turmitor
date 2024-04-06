@@ -167,8 +167,11 @@ function TurmitorServer.startup(batch_size, batch_time)
 
   main_context.info("Starting up all connected turtles.")
   local turtles = table.pack(smn.find("turtle"))
+  local batches = math.ceil(#turtles / batch_size)
+  local batch = 0
 
   for i = 1, #turtles, batch_size do
+    batch = batch + 1
     for j = 1, batch_size do
       local turtle = turtles[i + j - 1]
       if not turtle then
@@ -179,7 +182,8 @@ function TurmitorServer.startup(batch_size, batch_time)
       turtle.turnOn()
     end
 
-    main_context.debug("End of batch", (i - 1) / batch_size + 1, "- waiting", batch_time, "seconds.")
+    main_context.debug("End of batch", batch, "of", batches, "- waiting", batch_time, "seconds.")
+    main_context.debug("ETA:", (batches - batch + 1) * batch_time, "seconds.")
 
     sleep(batch_time)
   end
@@ -187,17 +191,20 @@ end
 
 --- Shutdown all connected turtles.
 ---@param batch_size number? The number of turtles to shut down at once, defaults to 100.
----@param batch_time number? The time to wait between shutting down each batch of turtles, defaults to 5 seconds.
+---@param batch_time number? The time to wait between shutting down each batch of turtles, defaults to 1 second.
 function TurmitorServer.shutdown(batch_size, batch_time)
   expect(1, batch_size, "number", "nil")
   expect(2, batch_time, "number", "nil")
   batch_size = batch_size or 100
-  batch_time = batch_time or 5
+  batch_time = batch_time or 1
 
   main_context.info("Shutting down all connected turtles.")
   local turtles = table.pack(smn.find("turtle"))
+  local batches = math.ceil(#turtles / batch_size)
+  local batch = 0
 
   for i = 1, #turtles, batch_size do
+    batch = batch + 1
     for j = 1, batch_size do
       local turtle = turtles[i + j - 1]
       if not turtle then
@@ -208,7 +215,8 @@ function TurmitorServer.shutdown(batch_size, batch_time)
       turtle.shutdown()
     end
 
-    main_context.debug("End of batch", (i - 1) / batch_size + 1, "- waiting", batch_time, "seconds.")
+    main_context.debug("End of batch", batch, "of", batches, "- waiting", batch_time, "seconds.")
+    main_context.debug("ETA:", (batches - batch + 1) * batch_time, "seconds.")
 
     sleep(batch_time)
   end
@@ -607,11 +615,36 @@ function TurmitorServer.get_redirect()
     end
 
     -- copy the old buffer to the new buffer, with the y offset.
-    for y = 1, size.y do
-      local new_y = y + lines
-      for x = 1, size.x do
-        if new_y >= 1 and new_y <= size.y then
-          new_buffer[y][new_y] = buffer_1[y][x]
+    if lines > 0 then
+      for y = 1, size.y do
+        local new_y = y - lines
+        local buf_y = {}
+        new_buffer[new_y] = buf_y
+        for x = 1, size.x do
+          if new_y >= 1 and new_y <= size.y then
+            local buf_char = {}
+            buf_y[x] = buf_char
+
+            buf_char.char = buffer_1[y][x].char
+            buf_char.fg = buffer_1[y][x].fg
+            buf_char.bg = buffer_1[y][x].bg
+          end
+        end
+      end
+    else
+      for y = size.y, 1, -1 do
+        local new_y = y - lines
+        local buf_y = {}
+        new_buffer[new_y] = buf_y
+        for x = 1, size.x do
+          if new_y >= 1 and new_y <= size.y then
+            local buf_char = {}
+            buf_y[x] = buf_char
+
+            buf_char.char = buffer_1[y][x].char
+            buf_char.fg = buffer_1[y][x].fg
+            buf_char.bg = buffer_1[y][x].bg
+          end
         end
       end
     end

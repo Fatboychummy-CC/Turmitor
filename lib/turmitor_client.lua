@@ -515,6 +515,8 @@ local function determine_bottom_right_corner()
   end
 end
 
+local det_context = logging.create_context("determine_position")
+
 --- Determine the position of the turtle in the grid, vertical style
 ---@return number x The x position of the turtle in the grid.
 ---@return number z The z position of the turtle in the grid.
@@ -536,16 +538,20 @@ local function _determine_vertical()
 
   -- Rotate so the modem is behind us.
   while not peripheral.hasType("back", "modem") do
+    det_context.debug("Rotating to find modem.")
     turn_right()
   end
 
-  -- Check if a turtle is in front or above.
+  -- Check if a turtle is on the right or above.
   local is_turtle_right, label_right = get_turtle_label("right")
   local is_turtle_up, label_up = get_turtle_label("top")
 
-  -- Turtle in front AND above.
+  det_context.debug(("Turtle on right: %s, Turtle above: %s."):format(tostring(is_turtle_right), tostring(is_turtle_up)))
+
+  -- Turtle on the right AND above.
   if is_turtle_right and is_turtle_up then
     -- Wait until both turtles know their position.
+    det_context.debug("Waiting for turtles to know their position.")
     while not label_up or not label_up:match(TURTLE_LABEL_MATCHER)
     or not label_right or not label_right:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
@@ -556,20 +562,23 @@ local function _determine_vertical()
     local x, z = label_right:match(TURTLE_LABEL_MATCHER)
     x, z = tonumber(x), tonumber(z)
     if x and z then
+      det_context.debug(("Got position from right: %d, %d."):format(x, z))
       return x + 1, z
     end
 
     x, z = label_up:match(TURTLE_LABEL_MATCHER)
     x, z = tonumber(x), tonumber(z)
     if x and z then
+      det_context.debug(("Got position from above: %d, %d."):format(x, z))
       return x, z + 1
     end
     error("Could not determine position of turtle in vertical array style (1).", 0)
   end
 
-  -- Only a turtle in front.
+  -- Only a turtle on the right
   if is_turtle_right then
-    -- Wait until the turtle in front knows its position.
+    -- Wait until the turtle on the right knows its position.
+    det_context.debug("Waiting for turtle on right to know its position.")
     while not label_right or not label_right:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
       label_right = peripheral.call("right", "getLabel")
@@ -578,6 +587,7 @@ local function _determine_vertical()
     local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
     x = tonumber(x)
     if x then
+      det_context.debug(("Got position from right: %d, 1."):format(x))
       return x + 1, 1
     end
     error("Could not determine position of turtle in vertical array style (2).", 0)
@@ -586,6 +596,7 @@ local function _determine_vertical()
   -- Only a turtle above.
   if is_turtle_up then
     -- Wait until the turtle above knows its position.
+    det_context.debug("Waiting for turtle above to know its position.")
     while not label_up or not label_up:match(TURTLE_LABEL_MATCHER) do
       sleep(1)
       label_up = peripheral.call("top", "getLabel")
@@ -594,10 +605,13 @@ local function _determine_vertical()
     local _, z = label_up:match(TURTLE_LABEL_MATCHER)
     z = tonumber(z)
     if z then
+      det_context.debug(("Got position from above: 1, %d."):format(z))
       return 1, z + 1
     end
     error("Could not determine position of turtle in vertical array style (3).", 0)
   end
+
+  det_context.debug("No turtles in front or above, at 1, 1.")
 
   -- No turtles in front or above.
   return 1, 1
