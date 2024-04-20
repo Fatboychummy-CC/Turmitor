@@ -61,6 +61,8 @@ if reset then
   init_context.warn("Resetting turtles.")
   -- Step 2: Send a reset command, and wait a good 10 or so seconds to ensure
   -- the turtles have had time to process the command.
+  TurmitorServer.steal_items()
+
   TurmitorServer.reset()
   init_context.info("Waiting a short amount of time to allow the turtles to process the request...")
   sleep(10)
@@ -112,4 +114,4 @@ while true do
   end
 end
 
-init_context.info("Turmitor initialization complete. You may wish to double-check the array to ensure that all turtles are numbered correctly, as some minor issues can occur depending on server load and turtle count.")
+init_context.warn("Turmitor initialization complete. You may wish to double-check the array to ensure that all turtles are numbered correctly, as some minor issues can occur depending on server load and turtle count.")
