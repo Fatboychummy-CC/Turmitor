@@ -36,14 +36,17 @@ end
 
 -- Begin initialization, Step 1: Determine the modem side.
 local set_modem = false
+local selected_modem
 if modem_selected then
   -- set_modem should throw an error if it is invalid.
   TurmitorServer.set_modem(modem_side)
+  selected_modem = modem_side
   set_modem = true
 else
   for _, side in pairs(rs.getSides()) do
     if peripheral.getType(side) == "modem" and not peripheral.call(side, "isWireless") then
       TurmitorServer.set_modem(side)
+      selected_modem = side
       set_modem = true
       break
     end
@@ -52,7 +55,7 @@ end
 if not set_modem then
   error("No wired modem found.", 0)
 end
-init_context.info("Modem set to:", TurmitorServer.get_modem())
+init_context.info("Modem set to:", selected_modem)
 
 if reset then
   init_context.warn("Resetting turtles.")
@@ -67,7 +70,7 @@ end
 while true do
   -- Step 3: Ensure no turtles are running.
   init_context.info("Stopping all turtles.")
-  TurmitorServer.stop_turtles(300, 2)
+  TurmitorServer.shutdown(300, 2)
   sleep(5)
 
   -- Step 4: Boot up all the turtles.
@@ -92,6 +95,7 @@ while true do
       sleep(5)
     else
       init_context.info("get_size returned:", x, y)
+      success = true
       break
     end
   end
