@@ -287,17 +287,17 @@ function TurmitorServer.set_character(term_x, term_y, fg, bg, char)
   end
 
   -- Determine the position within the font that the character is at.
-  local char_x, char_y = char:byte() % 16, math.floor(char:byte() / 16)
-  local placement_x = 2 + 6 * char_x + 2 * char_x
-  local placement_y = 2 + 9 * char_y + 2 * char_y
+  local _placement_x, _placement_y = char:byte() % 16, math.floor(char:byte() / 16)
+  local placement_x = 2 + 6 * _placement_x + 2 * _placement_x
+  local placement_y = 2 + 9 * _placement_y + 2 * _placement_y
 
   send_to_character(
     term_x - 1,
     term_y - 1,
     "character",
     {
-      char_x = placement_x,
-      char_y = placement_y,
+      offset_x = placement_x,
+      offset_y = placement_y,
       fg = fg,
       bg = bg
     }

@@ -886,8 +886,8 @@ local function listen_for_actions()
         if message.action == "character" then
           client_comms.debug("Received character message.")
           queue_block_using_font(
-            message.data.char_x,
-            message.data.char_y,
+            message.data.offset_x,
+            message.data.offset_y,
             message.data.fg,
             message.data.bg
           )
