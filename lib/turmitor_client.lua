@@ -140,6 +140,8 @@ local TURTLE_LABEL_MATCHER = "(%d+),(%d+)"
 ---@field public guideblock_top "minecraft:polished_andesite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished andesite.
 ---@field public guideblock_left "minecraft:polished_diorite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished diorite.
 ---@field public control_channel number The channel that the turtle listens on for control messages.
+---@field public is_bottom_right_corner boolean Whether or not the turtle is in the bottom-right corner of the array.
+---@field public frozen boolean Whether or not the screen is set to be "frozen" -- if frozen, no blocks can be placed.
 local TurmitorClient = {
   position = {
     x = -1,
@@ -193,6 +195,7 @@ local TurmitorClient = {
   guideblock_left = "minecraft:polished_diorite",
   control_channel = -1,
   is_bottom_right_corner = false,
+  frozen = false,
 }
 
 -- Private (local) functions
@@ -804,12 +807,32 @@ local function _determine_horizontal()
 end
 
 --- Place a block of the given color.
----@param color valid_colors The color of the block to place.
+---@param color valid_colors? The color of the block to place.
 local function place_block(color)
-  expect(1, color, "string")
+  expect(1, color, "string", "nil")
 
   -- Check if we actually need to change anything first.
   if TurmitorClient.current_color == color then
+    return
+  end
+
+  -- Check if it is just a pickup order. This is allowed if the screen is frozen!
+  if not color then
+    if TurmitorClient.current_color then
+      local slot_current = TurmitorClient.color_map[TurmitorClient.current_color]
+      turtle.select(slot_current)
+      if TurmitorClient.array_style == "vertical" then
+        turtle.dig()
+      else
+        turtle.digUp()
+      end
+    end
+    TurmitorClient.current_color = nil
+    return
+  end
+
+  -- If the screen is marked frozen, return.
+  if TurmitorClient.frozen then
     return
   end
 
@@ -937,6 +960,16 @@ local function listen_for_actions()
           else
             client_comms.info("Received get-size message, but not in bottom-right corner.")
           end
+        elseif message.action == "pickup" then
+          client_comms.info("Received pickup message.")
+          TurmitorClient.color_want = nil
+
+          sleep(0.5) -- ensure any other placement is done.
+          place_block()
+        elseif message.action == "freeze" then
+          TurmitorClient.frozen = true
+        elseif message.action == "thaw" then
+          TurmitorClient.frozen = false
         end
       end
     end
@@ -949,7 +982,7 @@ local function redraw()
     while TurmitorClient.color_want do
       local color_want = TurmitorClient.color_want
       TurmitorClient.color_want = nil
-      place_block(color_want) ---@diagnostic disable-line: param-type-mismatch - Cannot be nil.
+      place_block(color_want)
     end
 
     os.pullEvent("turmitorclient-queue-block")
