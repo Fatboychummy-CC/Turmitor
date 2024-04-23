@@ -436,6 +436,155 @@ function TurmitorServer.listen_for_errors()
   end
 end
 
+--- Steal items from the turtles and put them in available inventories.
+---
+--- If `item_lookup`, `chest_lookup`, and `buffer_chest` are provided, the items
+--- will be stolen and placed in the chests according to the lookup tables. If
+--- they are not provided, the items will be stolen and placed in the first
+--- available chest.
+---@param item_lookup table<string, valid_colors>? A table of item names to colors.
+---@param chest_lookup table<valid_colors, string[]>? A table of colors to chest names.
+---@param buffer_chest string? The name of the buffer chest to use.
+---@param no_freeze boolean? If true, the turtles will not be frozen before stealing items. This removes some of the wait time, and is mostly useful if you can ensure that nothing will be drawn to the screen during the stealing process.
+function TurmitorServer.steal_items(item_lookup, chest_lookup, buffer_chest, no_freeze)
+  expect(1, item_lookup, "table", "nil")
+  expect(2, chest_lookup, "table", "nil")
+  expect(3, buffer_chest, "string", "nil")
+
+  local function _notify_turtles()
+    if not no_freeze then
+      -- Freeze the turtles to ensure nothing is attempting to draw.
+      send_to_all("freeze", {})
+
+      -- Wait a short bit to ensure nothing is attempting to draw.
+      sleep(3)
+    end
+
+
+    -- Order turtles to pick up the currently placed block.
+    send_to_all("pickup", {})
+
+    main_context.info("Notification was sent to turtles to pick up their blocks.")
+    main_context.info("Waiting 3 seconds for turtles to pick up their blocks.")
+    sleep(3)
+  end
+
+  if item_lookup then
+    -- Steal items and place them in the chests according to the lookup tables.
+    main_context.debug("Item lookup provided, will be attempting to sort.")
+
+    if not chest_lookup or not buffer_chest then
+      error("If item_lookup is provided, chest_lookup and buffer_chest must also be provided.", 2)
+    end
+
+    -- Stage one: Ensure a chest exists for each color.
+    for _, color in pairs(item_lookup) do
+      if not chest_lookup[color] then
+        error("No chest found for color: " .. color, 2)
+      end
+    end
+
+    -- Stage two: Ensure all chests *exist* on the network.
+    for _, chest_names in pairs(chest_lookup) do
+      for _, chest_name in ipairs(chest_names) do
+        if not smn.isPresent(chest_name) then
+          error("Chest not found: " .. chest_name, 2)
+        end
+      end
+    end
+    if not smn.isPresent(buffer_chest) then
+      error("Buffer chest not found: " .. buffer_chest, 2)
+    end
+    local size = smn.call(buffer_chest, "size")
+    if size < 16 then
+      error("Buffer chest is too small (Need at least 16 slots).", 2)
+    end
+
+    -- All error cases should be dealt with.
+    _notify_turtles()
+
+    local function sort_buffer()
+      main_context.debug("Sorting buffer chest.")
+      local list = smn.call(buffer_chest, "list")
+      local funcs = {}
+
+      for slot, item in pairs(list) do
+        local color = item_lookup[item.name]
+        if color then
+          local chests = chest_lookup[color]
+          local pushed = 0
+
+          table.insert(funcs, function()
+            for i = 1, #chests do
+              local pushed_this_time = smn.call(chests[i], "pushItems", buffer_chest, slot)
+              pushed = pushed + pushed_this_time
+              if pushed >= item.count then
+                break
+              end
+            end
+          end)
+        end
+      end
+    end
+
+    -- Stage three: Become thief.
+    local turtles = table.pack(smn.find("turtle"))
+    local turtle_names = {}
+    for _, turtle in ipairs(turtles) do
+      table.insert(turtle_names, peripheral.getName(turtle))
+    end
+
+    -- Quickly just ensure the buffer chest is empty.
+    sort_buffer()
+
+    for i, turtle_name in ipairs(turtle_names) do
+      main_context.debug("Stealing from turtle", i, ":", turtle_name)
+      -- Step 1: Dump all items from this turtle into the buffer chest.
+      local funcs = {}
+
+      for j = 1, 16 do
+        table.insert(funcs, function()
+          smn.call(buffer_chest, "pullItems", turtle_name, j)
+        end)
+      end
+
+      parallel.waitForAll(table.unpack(funcs))
+
+      -- Step 2: Sort all items from the buffer chest into the correct chests.
+      sort_buffer()
+    end
+  else
+    -- Just dump all items into the first available chest.
+    local turtles = table.pack(smn.find("turtle"))
+    local invs = table.pack(smn.find("inventory"))
+
+    _notify_turtles()
+
+    for i, turtle in ipairs(turtles) do
+      main_context.debug("Stealing from turtle", i, ":", peripheral.getName(turtle))
+
+      local funcs = {}
+
+      for j = 1, 16 do
+        table.insert(funcs, function()
+          for _, inv in ipairs(invs) do
+            if inv.pullItems(peripheral.getName(turtle), j) > 0 then
+              break
+            end
+          end
+        end)
+      end
+
+      parallel.waitForAll(table.unpack(funcs))
+    end
+  end
+
+  if not no_freeze then
+    -- Unfreeze the turtles.
+    send_to_all("thaw", {})
+  end
+end
+
 --- Get an object that can be used like a terminal object (i.e: for `term.redirect`).
 ---@return TurmitorRedirect redirect The window-like redirect object.
 function TurmitorServer.get_redirect()
