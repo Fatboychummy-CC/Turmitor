@@ -996,6 +996,11 @@ function TurmitorServer.get_redirect()
   --- Force updates on every call, instead of when flush is called.
   ---@param visible boolean Whether or not to automatically update the screen.
   function redirect.setVisible(visible)
+    if visible and not auto_update then
+      -- If we're turning on auto update, we need to redraw.
+      flush_buffers()
+    end
+
     auto_update = visible
   end
 
