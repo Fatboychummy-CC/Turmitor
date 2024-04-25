@@ -18,6 +18,7 @@ local args = table.pack(...)
 -- Some crappy basic argument parsing.
 local reset = false
 local modem_selected = false
+local startup_count, startup_delay = 100, 15
 local modem_side
 local i = 0
 while i < args.n do
@@ -30,6 +31,10 @@ while i < args.n do
     modem_side = args[i + 1]
     i = i + 1
     init_context.debug("Modem argument found, side:", modem_side)
+  elseif args[i] == "--slow" or args[i] == "-s" then
+    startup_count = 50
+    startup_delay = 30
+    init_context.debug("Slow argument found.")
   end
 end
 
@@ -77,7 +82,7 @@ while true do
 
   -- Step 4: Boot up all the turtles.
   init_context.info("Starting all turtles.")
-  TurmitorServer.startup(100, 15)
+  TurmitorServer.startup(startup_count, startup_delay)
 
   init_context.info("The turtles, while setting up, will consume concrete from any network-attached chests.")
   init_context.warn("Press the enter key to continue when all the turtles have finished starting up.")
