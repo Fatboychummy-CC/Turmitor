@@ -17,6 +17,7 @@ local args = table.pack(...)
 
 -- Some crappy basic argument parsing.
 local reset = false
+local stop = false
 local modem_selected = false
 local startup_count, startup_delay = 100, 15
 local modem_side
@@ -35,9 +36,23 @@ while i < args.n do
     startup_count = 50
     startup_delay = 30
     init_context.debug("Slow argument found.")
+  elseif args[i] == "--stop" then
+    stop = true
+    init_context.debug("Stop argument found.")
+  elseif args[i] == "--help" or args[i] == "-h" then
+    print("Usage: initialize.lua [--modem <side>] [--slow] [--reset [--stop]]")
+    print("  --reset, -r: Reset the turtles.")
+    print("  --modem, -m <side>: Set the modem side.")
+    print("  --slow, -s: Use a slower startup.")
+    print("  --stop: Stop the turtles, requires the reset flag.")
+    return
+  else
+    error("Invalid argument: " .. args[i], 0)
   end
 end
 
+-- Stop is only used for resetting the turtles
+if stop and not reset then return end
 
 -- Begin initialization, Step 1: Determine the modem side.
 local set_modem = false
@@ -69,6 +84,12 @@ if reset then
   TurmitorServer.steal_items()
 
   TurmitorServer.reset()
+
+  if stop then
+    init_context.warn("Stop initialization flag was given, stopping...")
+    return
+  end
+
   init_context.info("Waiting a short amount of time to allow the turtles to process the request...")
   sleep(10)
 end
