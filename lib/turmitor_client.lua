@@ -95,6 +95,7 @@ local smn = require "single_modem_network"
 local file_helper = require "file_helper"
 local read_fbmp = require "read_fbmp"
 local TurmitorChannels = require "turmitor_channels"
+local TurtleFacing = require "turtle_facing"
 
 -- Setup libraries
 
@@ -199,31 +200,6 @@ local TurmitorClient = {
 }
 
 -- Private (local) functions
-
---- Wipe the event queue.
-local function wipe_queue()
-  os.queueEvent("__queue_end")
-  for i = 1, math.huge do
-    local ev = os.pullEvent()
-    if ev == "__queue_end" then break end
-    if i % 128 == 0 then os.queueEvent("__queue_end") end
-  end
-end
-
---- Turn the turtle to the left in a safe way that doesn't stall on too many events.
-local function turn_left()
-  coroutine.resume(coroutine.create(turtle.turnLeft))
-  wipe_queue()
-  sleep(0.5)
-end
-
---- Turn the turtle to the right in a safe way that doesn't stall on too many events.
-local function turn_right()
-  coroutine.resume(coroutine.create(turtle.turnRight))
-  wipe_queue()
-  sleep(0.5)
-end
-
 
 --- Count the length of a dictionary style table.
 ---@param tbl table The table to count the length of.
@@ -487,8 +463,16 @@ local function get_blocks()
 
         sleep(1) -- Wait a small bit between tries.
       end
+
+      sleep(1)
     end
   end
+end
+
+local function is_turtle_on_side(side)
+  expect(1, side, "string")
+
+  return peripheral.hasType(side, "turtle")
 end
 
 --- Check if the block on a given side is a turtle, and if so, get the label.
@@ -498,10 +482,44 @@ end
 local function get_turtle_label(side)
   expect(1, side, "string")
 
-  local is_turtle = peripheral.hasType(side, "turtle")
+  local is_turtle = is_turtle_on_side(side)
 
   if is_turtle then
     return true, peripheral.call(side, "getLabel")
+  end
+
+  return false
+end
+
+local function bool_count(...)
+  local n = 0
+  local args = table.pack(...)
+
+  for i = 1, args.n do
+    if args[i] then
+      n = n + 1
+    end
+  end
+
+  return n
+end
+
+--- Check that the block in front is not a guideblock.
+---@param override table? Block data to override with instead of re-inspecting.
+local function guideblock(override)
+  local is_block, block_data
+  if not override then
+    is_block, block_data = turtle.inspect()
+  else
+    is_block, block_data = true, override
+  end
+
+  if is_block then
+    local block_name = block_data.name
+    if block_name == TurmitorClient.guideblock_top
+    or block_name == TurmitorClient.guideblock_left then
+      return true
+    end
   end
 
   return false
@@ -514,7 +532,34 @@ local function determine_bottom_right_corner()
       TurmitorClient.is_bottom_right_corner = true
     end
   elseif TurmitorClient.array_style == "horizontal" then
-    ---@fixme implement this
+    if TurmitorClient.position.x ~= 1 and TurmitorClient.position.z ~= 1 then
+      -- Check the sides that do not have turtles to see if there is any guideblocks
+      local guideblock_found = false
+      local turtle_count = 0
+
+      for _ = 1, 4 do
+        local is_block, block_data = turtle.inspect()
+
+        local is_turtle = is_turtle_on_side("front")
+
+        ---@diagnostic disable-next-line: param-type-mismatch block_data is table if is_block is true.
+        if is_block and not is_turtle and guideblock(block_data) then
+          guideblock_found = true
+          break
+        end
+
+        if is_turtle then
+          turtle_count = turtle_count + 1
+        end
+
+        TurtleFacing.turn_right()
+      end
+
+      if not guideblock_found and turtle_count == 2 then
+        client_main.info("Turtle is in the bottom-right corner.")
+        TurmitorClient.is_bottom_right_corner = true
+      end
+    end
   end
 end
 
@@ -542,7 +587,7 @@ local function _determine_vertical()
   -- Rotate so the modem is behind us.
   while not peripheral.hasType("back", "modem") do
     det_context.debug("Rotating to find modem.")
-    turn_right()
+    TurtleFacing.turn_right()
   end
 
   -- Check if a turtle is on the right or above.
@@ -647,51 +692,26 @@ local function _determine_horizontal()
   local left_guideblock = false
   local top_guideblock = false
 
-  ---@alias turtle_facing
-  ---| `0` # "forward"
-  ---| `1` # "right"
-  ---| `2` # "back"
-  ---| `3` # "left"
+  TurtleFacing.turn_to(0)
 
-  local facing = 0 ---@type turtle_facing
+  --- Check if a guideblock is in the given direction, and what guideblock it is.
+  local function is_guideblock()
+    local is_block, block_data = turtle.inspect()
 
-  --- Check if a guideblock is in the given direction.
-  --- @param override_data table<string, string>? The data to use for the check.
-  local function is_guideblock(override_data)
-    local is_block, block_data
-    if override_data then
-      is_block = true
-      block_data = override_data
-    else
-      is_block, block_data = turtle.inspect()
-    end
-
-    if is_block then
+    ---@diagnostic disable-next-line: param-type-mismatch It will be a table if is_block is true.
+    if is_block and guideblock(block_data) then
       if block_data.name == TurmitorClient.guideblock_top then
-        top_guideblock = facing
+        top_guideblock = TurtleFacing.facing
         det_context.debug("Is top guideblock.")
         return true
       elseif block_data.name == TurmitorClient.guideblock_left then
-        left_guideblock = facing
+        left_guideblock = TurtleFacing.facing
         det_context.debug("Is left guideblock.")
         return true
       end
     end
 
     return false
-  end
-
-  local function bool_count(...)
-    local n = 0
-    local args = table.pack(...)
-
-    for i = 1, args.n do
-      if args[i] then
-        n = n + 1
-      end
-    end
-
-    return n
   end
 
   local function determine_from_2()
@@ -755,24 +775,6 @@ local function _determine_horizontal()
     return determine_from_2()
   end
 
-  local function right()
-    facing = (facing + 1) % 4
-    turn_right()
-  end
-  local function left()
-    facing = (facing - 1) % 4
-    turn_left()
-  end
-  local function face(d)
-    if (facing - 1) % 4 == d then
-      left()
-    else
-      while facing ~= d do
-        right()
-      end
-    end
-  end
-
   -- Check if both guideblocks exist.
   -- We need to face the direction no turtle was detected in.
   det_context.debug("Turtles (f,r,b,l):", is_turtle_front, is_turtle_right, is_turtle_back, is_turtle_left)
@@ -782,25 +784,25 @@ local function _determine_horizontal()
     end
   end
   if not is_turtle_right then
-    face(1)
+    TurtleFacing.turn_to(1)
     if is_guideblock() then
       det_context.debug("Guideblock to the right.")
     end
   end
   if not is_turtle_back then
-    face(2)
+    TurtleFacing.turn_to(2)
     if is_guideblock() then
       det_context.debug("Guideblock to rear.")
     end
   end
   if not is_turtle_left then
-    face(3)
+    TurtleFacing.turn_to(3)
     if is_guideblock() then
       det_context.debug("Guideblock to the left.")
     end
   end
 
-  face(0)
+  TurtleFacing.turn_to(0)
 
   -- If both guideblocks, we are at 1,1
   if left_guideblock and top_guideblock then
@@ -1004,7 +1006,9 @@ local function listen_for_actions()
                 action = "size",
                 data = {
                   x = TurmitorClient.position.char_x + 1,
-                  z = TurmitorClient.position.char_z + 1
+                  z = TurmitorClient.position.char_z + 1,
+                  actual_x = TurmitorClient.position.x,
+                  actual_z = TurmitorClient.position.z
                 }
               }
             )

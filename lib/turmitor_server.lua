@@ -396,7 +396,7 @@ function TurmitorServer.get_size(max_time)
   )
 
   if response.x and response.z then
-    getsize_context.info("Received size:", response.x, response.z)
+    getsize_context.info("Received size:", response.x, response.z, "(", response.actual_x, response.actual_z, ")")
     TurmitorServer.array_size.x = response.x
     TurmitorServer.array_size.z = response.z
   else
