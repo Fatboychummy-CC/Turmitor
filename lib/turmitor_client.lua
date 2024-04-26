@@ -644,7 +644,16 @@ local function _determine_horizontal()
   local is_turtle_left, label_left = get_turtle_label("left")
   local is_turtle_right, label_right = get_turtle_label("right")
 
-  local guideblock_type ---@type "top"|"left"?
+  local left_guideblock = false
+  local top_guideblock = false
+
+  ---@alias turtle_facing
+  ---| `0` # "forward"
+  ---| `1` # "right"
+  ---| `2` # "back"
+  ---| `3` # "left"
+
+  local facing = 0 ---@type turtle_facing
 
   --- Check if a guideblock is in the given direction.
   --- @param override_data table<string, string>? The data to use for the check.
@@ -659,10 +668,12 @@ local function _determine_horizontal()
 
     if is_block then
       if block_data.name == TurmitorClient.guideblock_top then
-        guideblock_type = "top"
+        top_guideblock = facing
+        det_context.debug("Is top guideblock.")
         return true
       elseif block_data.name == TurmitorClient.guideblock_left then
-        guideblock_type = "left"
+        left_guideblock = facing
+        det_context.debug("Is left guideblock.")
         return true
       end
     end
@@ -670,140 +681,180 @@ local function _determine_horizontal()
     return false
   end
 
-  -- On each empty side, check for a guideblock.
+  local function bool_count(...)
+    local n = 0
+    local args = table.pack(...)
 
-  -- Face the right-most empty side.
-  local double = false
-  if not is_turtle_front and not is_turtle_left then
-    double = true
-  elseif not is_turtle_left and not is_turtle_back then
-    double = true
-    turn_left()
-  elseif not is_turtle_back and not is_turtle_right then
-    double = true
-    turn_left()
-    turn_left()
-  elseif not is_turtle_right and not is_turtle_front then
-    double = true
-    turn_right()
+    for i = 1, args.n do
+      if args[i] then
+        n = n + 1
+      end
+    end
+
+    return n
   end
 
-  if not double then
-    -- Face the only empty side.
-    if not is_turtle_front then
-      -- nothing, already facing the right way.
-    elseif not is_turtle_left then
-      turn_left()
-    elseif not is_turtle_back then
-      turn_left()
-      turn_left()
-    elseif not is_turtle_right then
-      turn_right()
-    end
-  end
-
-  if is_guideblock() then
-    -- Facing a guideblock, are we at the top or left?
-    if guideblock_type == "top" then
-      -- We are at z=1.
-      -- Face left and check if there is a left guideblock.
-      turn_left()
-      if is_guideblock()then
-        -- We are at x=1.
-        return 1, 1
-      end
-
-      -- if the front is not a guideblock, it should be a turtle.
-      if not get_turtle_label("front") then
-        error("No turtle in front of the turtle at z=1 while facing left of top guideblock.", 0)
-      end
-
-      -- Now we can just wait for that turtle to know its position, and we are
-      -- at x+1,1.
-      repeat
-        sleep(1)
-        label_front = peripheral.call("front", "getLabel")
-      until label_front and label_front:match(TURTLE_LABEL_MATCHER)
-
-      ---@fixme this is unfinished
-    elseif guideblock_type == "left" then
-      -- we are at x=1.
-      -- Face right and check if there is a top guideblock.
-      turn_right()
-      if is_guideblock() then
-        -- We are at z=1.
-        return 1, 1
-      end
-
-      -- if the front is not a guideblock, it should be a turtle.
-      if not get_turtle_label("front") then
-        error("No turtle in front of the turtle at x=1 while facing right of left guideblock.", 0)
-      end
-
-      -- Now we can just wait for that turtle to know its position, and we are
-      -- at z+1,1.
-      repeat
-        sleep(1)
-        label_front = peripheral.call("front", "getLabel")
-      until label_front and label_front:match(TURTLE_LABEL_MATCHER)
-
-      ---@fixme this is unfinished
-    else
-      error("Guideblock, but no guideblock? Curious. (this should never happen)", 0)
-    end
-  else
-    -- No guideblock, so we need to wait for two turtles to know their position.
+  local function determine_from_2()
+    -- Wait until two of the turtles know their position.
+    -- The turtles should be side-by-side, otherwise error -- UNLESS, the second
+    -- turtle is (in comparison to the first turtle), at position "x + 2, z", or
+    -- "x, z + 2".
     repeat
       sleep(1)
       label_front = peripheral.call("front", "getLabel")
       label_back = peripheral.call("back", "getLabel")
-      label_right = peripheral.call("right", "getLabel")
       label_left = peripheral.call("left", "getLabel")
+      label_right = peripheral.call("right", "getLabel")
+      det_context.debug(label_front, label_back, label_left, label_right)
+      det_context.debug(bool_count(
+        label_front and label_front:match(TURTLE_LABEL_MATCHER),
+        label_back and label_back:match(TURTLE_LABEL_MATCHER),
+        label_left and label_left:match(TURTLE_LABEL_MATCHER),
+        label_right and label_right:match(TURTLE_LABEL_MATCHER)
+      ))
+    until bool_count(
+      label_front and label_front:match(TURTLE_LABEL_MATCHER),
+      label_back and label_back:match(TURTLE_LABEL_MATCHER),
+      label_left and label_left:match(TURTLE_LABEL_MATCHER),
+      label_right and label_right:match(TURTLE_LABEL_MATCHER)
+    ) >= 2
 
-      local known_count = (
-        (label_front and label_front:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
-        (label_back and label_back:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
-        (label_right and label_right:match(TURTLE_LABEL_MATCHER) and 1 or 0) +
-        (label_left and label_left:match(TURTLE_LABEL_MATCHER) and 1 or 0)
-      )
-    until known_count >= 2
+    -- because I can't just band-aid `and` into place for this :(
+    local function get_matches(a, b)
+      if a then
+        local x, z = a:match(TURTLE_LABEL_MATCHER)
+        if x and z then
+          return tonumber(x), tonumber(z)
+        end
+      end
 
-    -- Now we can extrapolate our position.
-    -- The right-most turtle that knows its position we should take the 'z'
-    -- value from, and the left-most turtle we should take the 'x' value from.
-    if label_front and label_left then
-      local _, z = label_front:match(TURTLE_LABEL_MATCHER)
-      local x, _ = label_left:match(TURTLE_LABEL_MATCHER)
-      x, z = tonumber(x), tonumber(z)
-      if x and z then
-        return x, z
-      end
-    elseif label_left and label_back then
-      local _, z = label_left:match(TURTLE_LABEL_MATCHER)
-      local x, _ = label_back:match(TURTLE_LABEL_MATCHER)
-      x, z = tonumber(x), tonumber(z)
-      if x and z then
-        return x, z
-      end
-    elseif label_back and label_right then
-      local _, z = label_back:match(TURTLE_LABEL_MATCHER)
-      local x, _ = label_right:match(TURTLE_LABEL_MATCHER)
-      x, z = tonumber(x), tonumber(z)
-      if x and z then
-        return x, z
-      end
-    elseif label_right and label_front then
-      local _, z = label_right:match(TURTLE_LABEL_MATCHER)
-      local x, _ = label_front:match(TURTLE_LABEL_MATCHER)
-      x, z = tonumber(x), tonumber(z)
-      if x and z then
-        return x, z
+      if b then
+        local x, z = b:match(TURTLE_LABEL_MATCHER)
+        if x and z then
+          return tonumber(x), tonumber(z)
+        end
       end
     end
-    error("Could not extrapolate position from turtles.", 0)
+
+    -- The two turtles should be side by side, then. Determine which two, then
+    -- set our position to the highest value for both.
+    local x1, z1 = get_matches(label_front, label_back)
+
+    local x2, z2 = get_matches(label_left, label_right)
+
+    if not x1 or not z1 or not x2 or not z2 then
+      error("Could not determine position of turtle in horizontal array style (2).", 0)
+    end
+
+    return math.max(x1, x2), math.max(z1, z2)
   end
 
-  error("Could not determine position of turtle.", 0)
+  -- First, check if we are enclosed by turtles.
+  if is_turtle_back and is_turtle_front and is_turtle_left and is_turtle_right then
+    det_context.debug("Turtle is enclosed by other turtles.")
+    return determine_from_2()
+  end
+
+  local function right()
+    facing = (facing + 1) % 4
+    turn_right()
+  end
+  local function left()
+    facing = (facing - 1) % 4
+    turn_left()
+  end
+  local function face(d)
+    if (facing - 1) % 4 == d then
+      left()
+    else
+      while facing ~= d do
+        right()
+      end
+    end
+  end
+
+  -- Check if both guideblocks exist.
+  -- We need to face the direction no turtle was detected in.
+  det_context.debug("Turtles (f,r,b,l):", is_turtle_front, is_turtle_right, is_turtle_back, is_turtle_left)
+  if not is_turtle_front then
+    if is_guideblock() then
+      det_context.debug("Guideblock in front.")
+    end
+  end
+  if not is_turtle_right then
+    face(1)
+    if is_guideblock() then
+      det_context.debug("Guideblock to the right.")
+    end
+  end
+  if not is_turtle_back then
+    face(2)
+    if is_guideblock() then
+      det_context.debug("Guideblock to rear.")
+    end
+  end
+  if not is_turtle_left then
+    face(3)
+    if is_guideblock() then
+      det_context.debug("Guideblock to the left.")
+    end
+  end
+
+  face(0)
+
+  -- If both guideblocks, we are at 1,1
+  if left_guideblock and top_guideblock then
+    return 1, 1
+  end
+
+  -- If top guideblock, then we are at ?,1. Wait for turtle left of the top
+  -- guideblock to know its position.
+  -- If left guideblock, then we are at 1,?. Wait for turtle left of the left
+  -- guideblock to know its position.
+  if top_guideblock or left_guideblock then
+    local label_selection
+    local guideblock = top_guideblock or left_guideblock
+    local sides = {"left", "front", "right", "back"}
+
+    if left_guideblock then
+      sides = {"right", "back", "left", "front"}
+    end
+
+    repeat
+      sleep(1)
+      label_selection = peripheral.call(
+        guideblock == 0 and sides[1]
+        or guideblock == 1 and sides[2]
+        or guideblock == 2 and sides[3]
+        or sides[4],
+        "getLabel"
+      )
+
+      det_context.debug("Waiting for:", guideblock == 0 and sides[1]
+        or guideblock == 1 and sides[2]
+        or guideblock == 2 and sides[3]
+        or sides[4]
+      )
+    until label_selection and label_selection:match(TURTLE_LABEL_MATCHER)
+
+    local x, z = label_selection:match(TURTLE_LABEL_MATCHER)
+    x = tonumber(x)
+    z = tonumber(z)
+
+    if x and top_guideblock then
+      return x + 1, 1
+    end
+    if z and left_guideblock then
+      return 1, z + 1
+    end
+
+    error("Could not determine position of turtle in horizontal array style (3).", 0)
+  end
+
+  -- No guideblocks, but we aren't enclosed (so we're on one of the other edges)
+  -- Treat this the same as being enclosed.
+  det_context.debug("No guideblocks, but also not enclosed.")
+  return determine_from_2()
 end
 
 --- Place a block of the given color.
@@ -870,14 +921,14 @@ end
 
 --- Queue a block placement using the font data.
 ---@param char_x number The x position of the character in the font.
----@param char_y number The y position of the character in the font.
+---@param char_z number The y position of the character in the font.
 ---@param fg valid_colors The foreground color of the character.
 ---@param bg valid_colors The background color of the character.
-local function queue_block_using_font(char_x, char_y, fg, bg)
+local function queue_block_using_font(char_x, char_z, fg, bg)
   local used_x = char_x + TurmitorClient.position.inner_x
-  local used_y = char_y + TurmitorClient.position.inner_z
+  local used_z = char_z + TurmitorClient.position.inner_z
 
-  if TurmitorClient.font[used_y] and TurmitorClient.font[used_y][used_x] then
+  if TurmitorClient.font[used_z] and TurmitorClient.font[used_z][used_x] then
     TurmitorClient.queue_block(fg)
   else
     TurmitorClient.queue_block(bg)
@@ -1036,10 +1087,10 @@ function TurmitorClient.determine_position()
   local x, z
 
   if TurmitorClient.array_style == "vertical" then
-    client_main.info("Vertical array is set up.")
+    client_main.info("Determining vertical array.")
     x, z = _determine_vertical()
   else
-    client_main.info("Horizontal array is set up.")
+    client_main.info("Determining horizontal array.")
     x, z = _determine_horizontal()
   end
 
