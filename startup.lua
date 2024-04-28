@@ -7,8 +7,8 @@ shell.setDir(fs.getDir(shell.getRunningProgram()))
 -- Set the package path to include the lib directory.
 package.path = package.path .. ";lib/?.lua;lib/?/init.lua"
 
+local logging = require "logging"
 -- Optional: Set logging level:
--- local logging = require "logging"
 -- logging.set_level(logging.LOG_LEVEL.DEBUG)
 
 -- Import the turtle client.
