@@ -10,6 +10,7 @@ local to_get = {
   "extern:lib/turmitor_client.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turmitor_client.lua",
   "extern:lib/turmitor_server.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turmitor_server.lua",
   "extern:lib/turtle_facing.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turtle_facing.lua",
+  "extern:data/font.fbmp:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/data/font.fbmp",
 
   -- Main requirements from Libraries
   "L:lib/logging.lua:logging.lua",
@@ -45,7 +46,7 @@ local use_diffs = true
 -- # You can use ranges to include multiple files (i.e: '+1-3' to include 1 to 3).
 local diffs = {
   all = {"all"},
-  lib_only = {"+4-11"},
+  lib_only = {"+4-12"},
 }
 --[[
   What version do you wish to install?
