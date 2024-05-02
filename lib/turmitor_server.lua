@@ -1009,6 +1009,27 @@ function TurmitorServer.get_redirect()
     return auto_update
   end
 
+  --- Cursor blink parallel process
+  function redirect.cursor_blink()
+    while true do
+      if cursor_blink then
+        send_to_all(
+          "cursor-blink-on",
+          {
+            x = cursor_x,
+            z = cursor_y,
+            color = text_color
+          }
+        )
+        sleep(2)
+        send_to_all("cursor-blink-off")
+        sleep(2)
+      else
+        sleep(1)
+      end
+    end
+  end
+
   return redirect
 end
 

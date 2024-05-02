@@ -992,6 +992,23 @@ local function listen_for_actions()
         if message.action == "clear" then
           client_comms.info("Received clear message of color", message.data.color)
           TurmitorClient.queue_block(message.data.color)
+        elseif message.action == "cursor-blink-on" then
+          client_comms.info("Received cursor-blink-on message.")
+          -- Check if this turtle is a part of the character needing to update.
+          if message.data.x == TurmitorClient.position.char_x
+          and message.data.z == TurmitorClient.position.char_z then
+            -- And check if the turtle's inner_z position is 7
+            if TurmitorClient.position.inner_z == 7 then
+              TurmitorClient.pre_blink_color = TurmitorClient.current_color
+              TurmitorClient.queue_block(message.data.color)
+            end
+          end
+        elseif message.action == "cursor-blink-off" then
+          client_comms.info("Received cursor-blink-off message.")
+          if TurmitorClient.pre_blink_color then
+            TurmitorClient.queue_block(TurmitorClient.pre_blink_color)
+            TurmitorClient.pre_blink_color = nil
+          end
         elseif message.action == "reset" then
           client_comms.warn("Received reset message.")
           reset()
@@ -1148,7 +1165,7 @@ function TurmitorClient.run()
 
     -- Transmit the error to the server.
     local ok_get_name, local_name = pcall(smn.getNameLocal)
-    
+
     pcall(smn.transmit,
       TurmitorChannels.CHANNEL_ERROR,
       0,
