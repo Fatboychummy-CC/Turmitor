@@ -121,17 +121,6 @@ local function send_to_character(x, y, action, data)
   )
 end
 
---- Convert a color from blit to a color that can be used by the turmitor server.
----@param hex string The blit color to convert.
----@return valid_colors? valid_color The converted color, or nil if the color is invalid.
-local function from_blit(hex)
-  if #hex ~= 1 then return end
-  local n = tonumber(hex, 16)
-  if not n then return end
-
-  return inverted_colors[2^n]
-end
-
 
 -- Public methods
 
