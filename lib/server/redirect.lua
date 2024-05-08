@@ -1,23 +1,18 @@
 --- A redirect object that can be used to draw text to the screen.
 
-local TurmitorServer = require "turmitor_server"
+local expect = require "cc.expect".expect
 
-local inverted_colors = {}
-for k, v in pairs(colors) do
-  if type(v) == "number" then
-    inverted_colors[v] = k
-  end
-end
+local TurmitorServer = require "turmitor_server"
 
 --- Convert a color from blit to a color that can be used by the turmitor server.
 ---@param hex string The blit color to convert.
----@return valid_colors? valid_color The converted color, or nil if the color is invalid.
+---@return color? valid_color The converted color, or nil if the color is invalid.
 local function from_blit(hex)
   if #hex ~= 1 then return end
   local n = tonumber(hex, 16)
   if not n then return end
 
-  return inverted_colors[2 ^ n]
+  return 2 ^ n
 end
 
 --[[ The following methods need to be implemented in our fake window.
@@ -52,16 +47,23 @@ end
     --> x.redraw
     ]]
 
+---@class BufferChar
+---@field char string The character to display.
+---@field fg color The foreground color.
+---@field bg color The background color.
+
 ---@class TurmitorRedirect
 local redirect = {}
 
 --- Buffer layer 1: All current changes are made to this buffer, but nothing
 --- here is drawn to the screen.
+---@type BufferChar[][]
 local buffer_1 = {}
 
 --- Buffer layer 2: When `.flush()` is called, buffer layer 1 is compared with
 --- this buffer, and only the differences are drawn to the screen. This buffer
 --- is then updated with the new contents.
+---@type BufferChar[][]
 local buffer_2 = {}
 
 --- If this is true, instead of waiting for `.flush()` to be called, the
@@ -179,10 +181,10 @@ function redirect.blit(text, _text_color, _background_color)
     -- Not sure if this is exactly how it works, but until someone yells at me
     -- for doing it wrong, this will be how it be.
     if not fg then
-      fg = "white"
+      fg = colors.white
     end
     if not bg then
-      bg = "black"
+      bg = colors.black
     end
 
     -- Add the order to the orders table, but only if on screen.
@@ -218,7 +220,7 @@ end
 function redirect.clear()
   if auto_update then
     -- immediately order a clear of the current background color.
-    TurmitorServer.clear(inverted_colors[background_color])
+    TurmitorServer.clear(background_color)
   end
 
   -- Set all characters in the buffer to the background color.
@@ -234,7 +236,7 @@ function redirect.clearLine()
   if auto_update then
     -- Immediately order all characters along the given y position to be cleared.
     for x = 1, size.x do
-      TurmitorServer.set_character(x, cursor_y, inverted_colors[text_color], inverted_colors[background_color], " ")
+      TurmitorServer.set_character(x, cursor_y, text_color, background_color, " ")
     end
   end
 
@@ -332,7 +334,7 @@ function redirect.scroll(lines)
     for y = 1, size.y do
       for x = 1, size.x do
         local char = new_buffer[y][x]
-        TurmitorServer.set_character(x, y, inverted_colors[char.fg], inverted_colors[char.bg], char.char)
+        TurmitorServer.set_character(x, y, char.fg, char.bg, char.char)
       end
     end
   end
@@ -395,8 +397,8 @@ function redirect.write(value)
     for i = 1, #value do
       local x_pos = cursor_x + i - 1
       if x_pos <= size.x and x_pos > 0 then
-        TurmitorServer.set_character(cursor_x + i - 1, cursor_y, inverted_colors[text_color],
-          inverted_colors[background_color], value:sub(i, i))
+        TurmitorServer.set_character(cursor_x + i - 1, cursor_y, text_color,
+          background_color, value:sub(i, i))
       end
     end
   end

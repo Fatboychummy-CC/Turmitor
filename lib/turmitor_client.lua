@@ -113,8 +113,18 @@ file_helper.working_directory = ""
 local data_folder = file_helper:instanced("data")
 
 -- Constants
+
 local FONT_FILE = "font.fbmp"
 local TURTLE_LABEL_MATCHER = "(%d+),(%d+)"
+
+-- File-global variables
+
+local inverted_colors = {}
+for k, v in pairs(colors) do
+  if type(v) == "number" then
+    inverted_colors[v] = k
+  end
+end
 
 -- Type definitions
 
@@ -126,18 +136,16 @@ local TURTLE_LABEL_MATCHER = "(%d+),(%d+)"
 ---@field inner_x number The x coordinate inside of the character that the turtle is positioned at. A negative value indicates unknown.
 ---@field inner_z number The z coordinate inside of the character that the turtle is positioned at. A negative value indicates unknown.
 
----@alias valid_colors "white"|"lightGray"|"gray"|"black"|"brown"|"red"|"orange"|"yellow"|"lime"|"green"|"cyan"|"lightBlue"|"blue"|"purple"|"magenta"|"pink"
-
 -- Class definition
 
 ---@class TurmitorClient
 ---@field public position TurmitorPosition The current position of the turtle.
 ---@field public array_style "horizontal"|"vertical" The style of the array. If horizontal, the array is built along the x/z axis (i.e flat across the ground). If vertical, the array is built along the x/y axis, with `z` referring to the `y` position.
 ---@field public font table The font data for the turtle.
----@field public blocks_used table<string, string> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
----@field public color_map table<valid_colors, integer> A map of color names to the inventory slot they should be in for the turtle.
----@field public current_color valid_colors? The current color that the turtle has placed.
----@field public color_want valid_colors? The color that the turtle wants to place next. This can update while currently placing a block, and allows the turtle to immediately place what is needed next, if needed.
+---@field public blocks_used table<string, color> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
+---@field public color_map table<color, integer> A map of color names to the inventory slot they should be in for the turtle.
+---@field public current_color color? The current color that the turtle has placed.
+---@field public color_want color? The color that the turtle wants to place next. This can update while currently placing a block, and allows the turtle to immediately place what is needed next, if needed.
 ---@field public guideblock_top "minecraft:polished_andesite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished andesite.
 ---@field public guideblock_left "minecraft:polished_diorite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished diorite.
 ---@field public control_channel number The channel that the turtle listens on for control messages.
@@ -155,43 +163,44 @@ local TurmitorClient = {
   array_style = "vertical",
   font = {},
   blocks_used = {
-    ["minecraft:white_concrete"] = "white",
-    ["minecraft:light_gray_concrete"] = "lightGray",
-    ["minecraft:gray_concrete"] = "gray",
-    ["minecraft:black_concrete"] = "black",
-    ["minecraft:brown_concrete"] = "brown",
-    ["minecraft:red_concrete"] = "red",
-    ["minecraft:orange_concrete"] = "orange",
-    ["minecraft:yellow_concrete"] = "yellow",
-    ["minecraft:lime_concrete"] = "lime",
-    ["minecraft:green_concrete"] = "green",
-    ["minecraft:cyan_concrete"] = "cyan",
-    ["minecraft:light_blue_concrete"] = "lightBlue",
-    ["minecraft:blue_concrete"] = "blue",
-    ["minecraft:purple_concrete"] = "purple",
-    ["minecraft:magenta_concrete"] = "magenta",
-    ["minecraft:pink_concrete"] = "pink",
+    ["minecraft:white_concrete"] = colors.white,
+    ["minecraft:light_gray_concrete"] = colors.lightGray,
+    ["minecraft:gray_concrete"] = colors.gray,
+    ["minecraft:black_concrete"] = colors.black,
+    ["minecraft:brown_concrete"] = colors.brown,
+    ["minecraft:red_concrete"] = colors.red,
+    ["minecraft:orange_concrete"] = colors.orange,
+    ["minecraft:yellow_concrete"] = colors.yellow,
+    ["minecraft:lime_concrete"] = colors.lime,
+    ["minecraft:green_concrete"] = colors.green,
+    ["minecraft:cyan_concrete"] = colors.cyan,
+    ["minecraft:light_blue_concrete"] = colors.lightBlue,
+    ["minecraft:blue_concrete"] = colors.blue,
+    ["minecraft:purple_concrete"] = colors.purple,
+    ["minecraft:magenta_concrete"] = colors.magenta,
+    ["minecraft:pink_concrete"] = colors.pink
   },
   color_map = {
-    white = 1,
-    lightGray = 2,
-    gray = 3,
-    black = 4,
-    brown = 5,
-    red = 6,
-    orange = 7,
-    yellow = 8,
-    lime = 9,
-    green = 10,
-    cyan = 11,
-    lightBlue = 12,
-    blue = 13,
-    purple = 14,
-    magenta = 15,
-    pink = 16
+    -- updated to use colors library
+    [colors.white] = 1,
+    [colors.lightGray] = 2,
+    [colors.gray] = 3,
+    [colors.black] = 4,
+    [colors.brown] = 5,
+    [colors.red] = 6,
+    [colors.orange] = 7,
+    [colors.yellow] = 8,
+    [colors.lime] = 9,
+    [colors.green] = 10,
+    [colors.cyan] = 11,
+    [colors.lightBlue] = 12,
+    [colors.blue] = 13,
+    [colors.purple] = 14,
+    [colors.magenta] = 15,
+    [colors.pink] = 16
   },
   current_color = nil,
-  color_want = "black",
+  color_want = colors.black,
   guideblock_top = "minecraft:polished_andesite",
   guideblock_left = "minecraft:polished_diorite",
   control_channel = -1,
@@ -330,21 +339,21 @@ local function resolve_incorrect_slot(slot)
 
   if slot == slot_want then
     -- Nothing to do, why was this called?
-    client_main.warn(("resolve_incorrect_slot called (%d : %s), but correct item is in slot."):format(slot, color))
+    client_main.warn(("resolve_incorrect_slot called (%d : %s), but correct item is in slot."):format(slot, inverted_colors[color]))
     return
   end
 
   if turtle.transferTo(slot_want) then
-    client_main.info(("Moved block for color %s to slot %d."):format(color, slot_want))
+    client_main.info(("Moved block for color %s to slot %d."):format(inverted_colors[color], slot_want))
   else
-    client_main.warn(("Could not move block for color %s to slot %d. Returning to inventory."):format(color, slot_want))
+    client_main.warn(("Could not move block for color %s to slot %d. Returning to inventory."):format(inverted_colors[color], slot_want))
     return_to_inventory(slot)
   end
 end
 
 --- Check if the turtle has the right types of blocks in its inventory, in the
 --- right slots.
----@return table<valid_colors, integer> blocks_missing The colors that are missing from the inventory.
+---@return table<color, integer> blocks_missing The colors that are missing from the inventory.
 local function check_inventory()
   client_main.debug("Checking inventory.")
 
@@ -356,7 +365,7 @@ local function check_inventory()
     if block_data then
       -- Check if the block is in the wrong spot.
       if color ~= TurmitorClient.blocks_used[block_data.name] then
-        client_main.warn(("Block for color %s is in the wrong slot (check)."):format(color))
+        client_main.warn(("Block for color %s is in the wrong slot (check)."):format(inverted_colors[color]))
         client_main.info(block_data.name, TurmitorClient.color_map[TurmitorClient.blocks_used[block_data.name]])
         sleep(5)
 
@@ -364,7 +373,7 @@ local function check_inventory()
       end
     else
       -- If the block is missing
-      client_main.warn(("Missing block for color %s in slot %d."):format(color, slot))
+      client_main.warn(("Missing block for color %s in slot %d."):format(inverted_colors[color], slot))
       blocks_missing[color] = slot
     end
   end
@@ -385,11 +394,11 @@ local function check_inventory()
     end
 
     if blocks_missing[color] then
-      client_main.info(("Found placed block for color %s."):format(color))
+      client_main.info(("Found placed block for color %s."):format(inverted_colors[color]))
       blocks_missing[color] = nil
     else
       -- Return the block to the inventory.
-      client_main.warn(("Block of color %s is in our inventory AND placed. Returning one of them."):format(color))
+      client_main.warn(("Block of color %s is in our inventory AND placed. Returning one of them."):format(inverted_colors[color]))
       return_to_inventory(TurmitorClient.color_map[color])
     end
 
@@ -437,26 +446,26 @@ local function get_blocks()
           local color = TurmitorClient.blocks_used[item_data.name]
 
           if color and blocks_missing[color] then
-            client_main.info(("Found block for color %s in %s."):format(color, inv_name))
+            client_main.info(("Found block for color %s in %s."):format(inverted_colors[color], inv_name))
 
             -- Attempt to take the block.
             local moved_count = smn.call(inv_name, "pushItems", turtle_name, slot, 1, TurmitorClient.color_map[color])
 
             if moved_count >= 1 then
-              client_main.info(("Took block for color %s from %s."):format(color, inv_name))
+              client_main.info(("Took block for color %s from %s."):format(inverted_colors[color], inv_name))
 
               -- And double check that the slot now contains the item we want,
               -- and not something different.
               local block_data = turtle.getItemDetail(TurmitorClient.color_map[color])
               if block_data and block_data.name ~= item_data.name then
-                client_main.warn(("Block for color %s is in the wrong slot (get)."):format(color))
+                client_main.warn(("Block for color %s is in the wrong slot (get)."):format(inverted_colors[color]))
                 resolve_incorrect_slot(TurmitorClient.color_map[color])
               elseif block_data then
-                client_main.info(("Block for color %s is now in the correct slot."):format(color))
+                client_main.info(("Block for color %s is now in the correct slot."):format(inverted_colors[color]))
                 blocks_missing[color] = nil
               end
             else
-              client_main.warn(("Could not take block for color %s from %s."):format(color, inv_name))
+              client_main.warn(("Could not take block for color %s from %s."):format(inverted_colors[color], inv_name))
             end
           end
         end
@@ -860,9 +869,14 @@ local function _determine_horizontal()
 end
 
 --- Place a block of the given color.
----@param color valid_colors? The color of the block to place.
+---@param color color? The color of the block to place.
 local function place_block(color)
-  expect(1, color, "string", "nil")
+  expect(1, color, "number", "nil")
+
+  -- Ensure the color is valid.
+  if not inverted_colors[color] then
+    error(("Invalid color specified: %s"):format(color), 0)
+  end
 
   -- Check if we actually need to change anything first.
   if TurmitorClient.current_color == color then
@@ -892,7 +906,7 @@ local function place_block(color)
   -- Get the slot for the color.
   local slot = TurmitorClient.color_map[color]
   if not slot then
-    error(("Invalid color specified: %s"):format(color), 0)
+    error(("Invalid color specified: %s"):format(inverted_colors[color]), 0)
   end
 
   if TurmitorClient.current_color then
@@ -924,8 +938,8 @@ end
 --- Queue a block placement using the font data.
 ---@param char_x number The x position of the character in the font.
 ---@param char_z number The y position of the character in the font.
----@param fg valid_colors The foreground color of the character.
----@param bg valid_colors The background color of the character.
+---@param fg color The foreground color of the character.
+---@param bg color The background color of the character.
 local function queue_block_using_font(char_x, char_z, fg, bg)
   local used_x = char_x + TurmitorClient.position.inner_x
   local used_z = char_z + TurmitorClient.position.inner_z
@@ -1102,7 +1116,7 @@ function TurmitorClient.determine_position()
 end
 
 --- Queue a block placement.
---- @param color valid_colors The color of the block to place.
+--- @param color color The color of the block to place.
 function TurmitorClient.queue_block(color)
   TurmitorClient.color_want = color
 
@@ -1131,7 +1145,7 @@ function TurmitorClient.run()
     client_main.info("Initialization complete. Placing black block.")
 
     -- Ensure that the screen is blank.
-    place_block("black")
+    place_block(colors.black)
 
     client_main.info("Running main loops.")
     if TurmitorClient.is_bottom_right_corner then

@@ -81,7 +81,7 @@ end
 ---@class PixelData
 ---@field x number The x position of the pixel.
 ---@field y number The y position of the pixel.
----@field color valid_colors The color of the pixel.
+---@field color color The color of the pixel.
 
 
 ---@class TurmitorServer
@@ -223,9 +223,13 @@ function TurmitorServer.shutdown(batch_size, batch_time)
 end
 
 --- Clear the entire screen with a specified color.
----@param color valid_colors The color to clear the screen with.
+---@param color color The color to clear the screen with.
 function TurmitorServer.clear(color)
-  expect(1, color, "string")
+  expect(1, color, "number")
+  -- ensure the color is valid (2^n)
+  if not inverted_colors[color] then
+    error("Invalid color.", 2)
+  end
 
   send_to_all(
     "clear",
@@ -243,35 +247,21 @@ end
 --- Send a character to the specified terminal position.
 ---@param term_x number The x position on the terminal, 1-indexed.
 ---@param term_y number The y position on the terminal, 1-indexed.
----@param fg valid_colors|color The foreground color of the character.
----@param bg valid_colors|color The background color of the character.
+---@param fg color|color The foreground color of the character.
+---@param bg color|color The background color of the character.
 ---@param char string The character to display.
 function TurmitorServer.set_character(term_x, term_y, fg, bg, char)
   expect(1, term_x, "number")
   expect(2, term_y, "number")
-  expect(3, fg, "string", "number")
-  expect(4, bg, "string", "number")
+  expect(3, fg, "number")
+  expect(4, bg, "number")
   expect(5, char, "string")
 
-  if type(fg) == "number" then
-    fg = inverted_colors[fg]
-    if not fg then
-      error("Invalid color (fg).", 2)
-    end
-  end
-
-  if type(bg) == "number" then
-    bg = inverted_colors[bg]
-    if not bg then
-      error("Invalid color (bg).", 2)
-    end
-  end
-
-  if type(colors[fg]) ~= "number" then
+  if not inverted_colors[fg] then
     error("Invalid color (fg).", 2)
   end
 
-  if type(colors[bg]) ~= "number" then
+  if not inverted_colors[bg] then
     error("Invalid color (bg).", 2)
   end
 
@@ -296,11 +286,16 @@ end
 --- Send an update to a single pixel.
 ---@param x number The x position of the pixel, 1-indexed.
 ---@param y number The y position of the pixel, 1-indexed.
----@param color valid_colors The color to set the pixel to.
+---@param color color The color to set the pixel to.
 function TurmitorServer.set_pixel(x, y, color)
   expect(1, x, "number")
   expect(2, y, "number")
-  expect(3, color, "string")
+  expect(3, color, "number")
+
+  -- ensure the color is valid (2^n)
+  if not inverted_colors[color] then
+    error("Invalid color.", 2)
+  end
 
   -- Determine the character position the pixel is at.
   local char_x, char_y = math.floor((x - 1) / 6), math.floor((y - 1) / 9)
@@ -431,8 +426,8 @@ end
 --- will be stolen and placed in the chests according to the lookup tables. If
 --- they are not provided, the items will be stolen and placed in the first
 --- available chest.
----@param item_lookup table<string, valid_colors>? A table of item names to colors.
----@param chest_lookup table<valid_colors, string[]>? A table of colors to chest names.
+---@param item_lookup table<string, color>? A table of item names to colors.
+---@param chest_lookup table<color, string[]>? A table of colors to chest names.
 ---@param buffer_chest string? The name of the buffer chest to use.
 ---@param no_freeze boolean? If true, the turtles will not be frozen before stealing items. This removes some of the wait time, and is mostly useful if you can ensure that nothing will be drawn to the screen during the stealing process.
 function TurmitorServer.steal_items(item_lookup, chest_lookup, buffer_chest, no_freeze)
@@ -576,7 +571,7 @@ end
 
 --- Get an object that can be used like a terminal object (i.e: for `term.redirect`).
 ---@return TurmitorRedirect redirect The window-like redirect object.
-function TurmitorServer.get_redirect()
+function TurmitorServer.get_terminal_interface()
   return require "server.redirect"
 end
 
