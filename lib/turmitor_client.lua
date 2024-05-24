@@ -920,6 +920,13 @@ local function place_block(color)
     else
       turtle.digUp()
     end
+
+    -- If the color changed while we were digging, exit so we can place the new
+    -- color instead.
+    if TurmitorClient.color_want and TurmitorClient.color_want ~= color then
+      TurmitorClient.current_color = nil
+      return
+    end
   end
 
   -- Select the slot of the block we want to place.
