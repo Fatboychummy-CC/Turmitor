@@ -12,12 +12,12 @@
     - data: table
       - orders: list<table>
         - x: number The x position of the turtle.
-        - z: number The z position of the turtle.
+        - y: number The y position of the turtle.
         - color: valid_colors The color of the block to place.
   - place: Have a single specified turtle place a block.
     - data: table
       - x: number The x position of the turtle.
-      - z: number The z position of the turtle.
+      - y: number The y position of the turtle.
       - color: valid_colors The color of the block to place.
   - clear: Have all turtles clear the screen.
     - data: table
@@ -29,7 +29,7 @@
     respond.
     - response: table
       - x: number The x size of the array.
-      - z: number The z size of the array.
+      - y: number The y size of the array.
 
   For example, to send a character:
   ```lua
@@ -86,7 +86,7 @@ end
 
 ---@class TurmitorServer
 local TurmitorServer = {
-  array_size = {x = 0, z = 0}
+  array_size = {x = 0, y = 0}
 }
 
 
@@ -306,7 +306,7 @@ function TurmitorServer.set_pixel(x, y, color)
     "place",
     {
       x = x,
-      z = y,
+      y = y,
       color = color
     }
   )
@@ -330,9 +330,9 @@ end
 --- Get the size of the array. We need to wait for a response from the bottom-right-most turtle, so this method may take some time. Returns 0,0 on timeout.
 ---@param max_time number? The maximum time to wait for a response, defaults to 5 seconds.
 ---@return number x The x size of the array, in characters.
----@return number z The z size of the array, in characters.
+---@return number y The y size of the array, in characters.
 ---@return number actual_x The actual x size of the array.
----@return number actual_z The actual z size of the array.
+---@return number actual_y The actual y size of the array.
 function TurmitorServer.get_size(max_time)
   expect(1, max_time, "number", "nil")
   max_time = max_time or 5
@@ -381,22 +381,22 @@ function TurmitorServer.get_size(max_time)
     end
   )
 
-  if response.x and response.z then
-    getsize_context.info("Received size:", response.x, response.z, "(", response.actual_x, response.actual_z, ")")
+  if response.x and response.y then
+    getsize_context.info("Received size:", response.x, response.y, "(", response.actual_x, response.actual_y, ")")
     TurmitorServer.array_size.x = response.x
-    TurmitorServer.array_size.z = response.z
+    TurmitorServer.array_size.y = response.y
   else
     getsize_context.warn("Did not receive size response.")
   end
 
-  return response.x or 0, response.z or 0, response.actual_x or 0, response.actual_z or 0
+  return response.x or 0, response.y or 0, response.actual_x or 0, response.actual_y or 0
 end
 
 --- Get the size of the array. This method will return the cached value if it exists, instead of requesting a new value. Returns 0,0 if the cached value does not exist.
 ---@return number x The x size of the array.
----@return number z The z size of the array.
+---@return number y The y size of the array.
 function TurmitorServer.get_size_cached()
-  return TurmitorServer.array_size.x, TurmitorServer.array_size.z
+  return TurmitorServer.array_size.x, TurmitorServer.array_size.y
 end
 
 --- Listen for turtle errors. This method is meant to be used in parallel with

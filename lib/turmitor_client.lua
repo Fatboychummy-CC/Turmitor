@@ -44,12 +44,12 @@
     - data: table
       - orders: list<table>
         - x: number The x position of the turtle.
-        - z: number The z position of the turtle.
+        - y: number The y position of the turtle.
         - color: valid_colors The color of the block to place.
   - place: Have a single specified turtle place a block.
     - data: table
       - x: number The x position of the turtle.
-      - z: number The z position of the turtle.
+      - y: number The y position of the turtle.
       - color: valid_colors The color of the block to place.
   - clear: Have all turtles clear the screen.
     - data: table
@@ -61,7 +61,7 @@
     respond.
     - response: table
       - x: number The x size of the array.
-      - z: number The z size of the array.
+      - y: number The y size of the array.
 
   For example, to send a character:
   ```lua
@@ -130,11 +130,11 @@ end
 
 ---@class TurmitorPosition
 ---@field x number The x coordinate of the turtle. A negative value indicates unknown.
----@field z number The z coordinate of the turtle, or the y coordinate if the array is built vertically. A negative value indicates unknown.
+---@field y number The y coordinate of the turtle, or the y coordinate if the array is built vertically. A negative value indicates unknown.
 ---@field char_x number The character-x coordinate of the turtle (the array is divided into 6x9 "characters"). A negative value indicates unknown.
----@field char_z number The character-z coordinate of the turtle (the array is divided into 6x9 "characters"). A negative value indicates unknown.
+---@field char_y number The character-y coordinate of the turtle (the array is divided into 6x9 "characters"). A negative value indicates unknown.
 ---@field inner_x number The x coordinate inside of the character that the turtle is positioned at. A negative value indicates unknown.
----@field inner_z number The z coordinate inside of the character that the turtle is positioned at. A negative value indicates unknown.
+---@field inner_y number The y coordinate inside of the character that the turtle is positioned at. A negative value indicates unknown.
 
 -- Class definition
 
@@ -154,11 +154,11 @@ end
 local TurmitorClient = {
   position = {
     x = -1,
-    z = -1,
+    y = -1,
     char_x = -1,
-    char_z = -1,
+    char_y = -1,
     inner_x = -1,
-    inner_z = -1
+    inner_y = -1
   },
   array_style = "vertical",
   font = {},
@@ -279,14 +279,14 @@ local function load()
   )
   client_main.debug("Loaded turmitor data.")
 
-  if position_data.x == -1 or position_data.z == -1 then
+  if position_data.x == -1 or position_data.y == -1 then
     client_main.debug("Loaded data was unknown, determining position.")
     TurmitorClient.determine_position()
-  elseif not position_data.x or not position_data.z then
+  elseif not position_data.x or not position_data.y then
     client_main.fatal("Loaded data was invalid, resetting.")
     reset()
   else
-    TurmitorClient.set_position(position_data.x, position_data.z)
+    TurmitorClient.set_position(position_data.x, position_data.y)
   end
 end
 
@@ -295,11 +295,11 @@ local function save()
   client_main.debug("Saving turmitor data.")
   data_folder:serialize("turmitor_data.lson", {
     x = TurmitorClient.position.x,
-    z = TurmitorClient.position.z
+    y = TurmitorClient.position.y
   })
 
   -- And set the label
-  os.setComputerLabel(("%d,%d"):format(TurmitorClient.position.x, TurmitorClient.position.z))
+  os.setComputerLabel(("%d,%d"):format(TurmitorClient.position.x, TurmitorClient.position.y))
 end
 
 --- Return the items in a slot to the inventory. Keeps trying until successful,
@@ -541,7 +541,7 @@ local function determine_bottom_right_corner()
       TurmitorClient.is_bottom_right_corner = true
     end
   elseif TurmitorClient.array_style == "horizontal" then
-    if TurmitorClient.position.x ~= 1 and TurmitorClient.position.z ~= 1 then
+    if TurmitorClient.position.x ~= 1 and TurmitorClient.position.y ~= 1 then
       -- Check the sides that do not have turtles to see if there is any guideblocks
       local guideblock_found = false
       local turtle_count = 0
@@ -576,7 +576,7 @@ local det_context = logging.create_context("determine_position")
 
 --- Determine the position of the turtle in the grid, vertical style
 ---@return number x The x position of the turtle in the grid.
----@return number z The z position of the turtle in the grid.
+---@return number y The y position of the turtle in the grid.
 local function _determine_vertical()
   -- Vertical grid is easy, we can just:
   -- 1. Rotate so the modem is behind us.
@@ -586,10 +586,10 @@ local function _determine_vertical()
   -- 1. Turtle in front, turtle above: Wait until either turtle knows its
   --    position, then set our position to the turtle's position + 1 (along
   --    whatever axis is needed).
-  -- 2. Turtle in front, no turtle above: We know we are at z 1. Wait until the
+  -- 2. Turtle in front, no turtle above: We know we are at y 1. Wait until the
   --    turtle in front knows its position, then set our position to x + 1, 1.
   -- 3. No turtle in front, turtle above: We know we are at x 1. Wait until the
-  --    turtle above knows its position, then set our position to 1, z + 1.
+  --    turtle above knows its position, then set our position to 1, y + 1.
   -- 4. No turtle in front, no turtle above: We are at 1, 1. We are the first
   --    turtle in the array.
 
@@ -616,18 +616,18 @@ local function _determine_vertical()
       label_up = peripheral.call("top", "getLabel")
     end
 
-    local x, z = label_right:match(TURTLE_LABEL_MATCHER)
-    x, z = tonumber(x), tonumber(z)
-    if x and z then
-      det_context.debug(("Got position from right: %d, %d."):format(x, z))
-      return x + 1, z
+    local x, y = label_right:match(TURTLE_LABEL_MATCHER)
+    x, y = tonumber(x), tonumber(y)
+    if x and y then
+      det_context.debug(("Got position from right: %d, %d."):format(x, y))
+      return x + 1, y
     end
 
-    x, z = label_up:match(TURTLE_LABEL_MATCHER)
-    x, z = tonumber(x), tonumber(z)
-    if x and z then
-      det_context.debug(("Got position from above: %d, %d."):format(x, z))
-      return x, z + 1
+    x, y = label_up:match(TURTLE_LABEL_MATCHER)
+    x, y = tonumber(x), tonumber(y)
+    if x and y then
+      det_context.debug(("Got position from above: %d, %d."):format(x, y))
+      return x, y + 1
     end
     error("Could not determine position of turtle in vertical array style (1).", 0)
   end
@@ -659,11 +659,11 @@ local function _determine_vertical()
       label_up = peripheral.call("top", "getLabel")
     end
 
-    local _, z = label_up:match(TURTLE_LABEL_MATCHER)
-    z = tonumber(z)
-    if z then
-      det_context.debug(("Got position from above: 1, %d."):format(z))
-      return 1, z + 1
+    local _, y = label_up:match(TURTLE_LABEL_MATCHER)
+    y = tonumber(y)
+    if y then
+      det_context.debug(("Got position from above: 1, %d."):format(y))
+      return 1, y + 1
     end
     error("Could not determine position of turtle in vertical array style (3).", 0)
   end
@@ -677,13 +677,13 @@ end
 --- Determine the position of the turtle in the grid, horizontal style.
 --- This entire function is a mess, but I'm unsure how I'd clean it up.
 ---@return number x The x position of the turtle in the grid.
----@return number z The z position of the turtle in the grid.
+---@return number y The y position of the turtle in the grid.
 local function _determine_horizontal()
   -- Determining the horizontal position is a bit more of a pain.
   -- 1. Check all sides to see if there is a turtle there.
   -- 2. If no turtle is in that direction, turn and check if there is a guide
   --    block there. At most, two sides should be empty.
-  -- 3. If a top guideblock is there, then the turtle knows it is at z=1.
+  -- 3. If a top guideblock is there, then the turtle knows it is at y=1.
   --    a) From there, the turtle should face left and wait until the turtle in
   --       front knows its position, then it is at x+1,1.
   --    b) If a left guideblock is there, then the turtle knows it is at x=1.
@@ -726,8 +726,8 @@ local function _determine_horizontal()
   local function determine_from_2()
     -- Wait until two of the turtles know their position.
     -- The turtles should be side-by-side, otherwise error -- UNLESS, the second
-    -- turtle is (in comparison to the first turtle), at position "x + 2, z", or
-    -- "x, z + 2".
+    -- turtle is (in comparison to the first turtle), at position "x + 2, y", or
+    -- "x, y + 2".
     repeat
       sleep(1)
       label_front = peripheral.call("front", "getLabel")
@@ -751,31 +751,31 @@ local function _determine_horizontal()
     -- because I can't just band-aid `and` into place for this :(
     local function get_matches(a, b)
       if a then
-        local x, z = a:match(TURTLE_LABEL_MATCHER)
-        if x and z then
-          return tonumber(x), tonumber(z)
+        local x, y = a:match(TURTLE_LABEL_MATCHER)
+        if x and y then
+          return tonumber(x), tonumber(y)
         end
       end
 
       if b then
-        local x, z = b:match(TURTLE_LABEL_MATCHER)
-        if x and z then
-          return tonumber(x), tonumber(z)
+        local x, y = b:match(TURTLE_LABEL_MATCHER)
+        if x and y then
+          return tonumber(x), tonumber(y)
         end
       end
     end
 
     -- The two turtles should be side by side, then. Determine which two, then
     -- set our position to the highest value for both.
-    local x1, z1 = get_matches(label_front, label_back)
+    local x1, y1 = get_matches(label_front, label_back)
 
-    local x2, z2 = get_matches(label_left, label_right)
+    local x2, y2 = get_matches(label_left, label_right)
 
-    if not x1 or not z1 or not x2 or not z2 then
+    if not x1 or not y1 or not x2 or not y2 then
       error("Could not determine position of turtle in horizontal array style (2).", 0)
     end
 
-    return math.max(x1, x2), math.max(z1, z2)
+    return math.max(x1, x2), math.max(y1, y2)
   end
 
   -- First, check if we are enclosed by turtles.
@@ -848,15 +848,15 @@ local function _determine_horizontal()
       )
     until label_selection and label_selection:match(TURTLE_LABEL_MATCHER)
 
-    local x, z = label_selection:match(TURTLE_LABEL_MATCHER)
+    local x, y = label_selection:match(TURTLE_LABEL_MATCHER)
     x = tonumber(x)
-    z = tonumber(z)
+    y = tonumber(y)
 
     if x and top_guideblock then
       return x + 1, 1
     end
-    if z and left_guideblock then
-      return 1, z + 1
+    if y and left_guideblock then
+      return 1, y + 1
     end
 
     error("Could not determine position of turtle in horizontal array style (3).", 0)
@@ -944,14 +944,14 @@ end
 
 --- Queue a block placement using the font data.
 ---@param char_x number The x position of the character in the font.
----@param char_z number The y position of the character in the font.
+---@param char_y number The y position of the character in the font.
 ---@param fg color The foreground color of the character.
 ---@param bg color The background color of the character.
-local function queue_block_using_font(char_x, char_z, fg, bg)
+local function queue_block_using_font(char_x, char_y, fg, bg)
   local used_x = char_x + TurmitorClient.position.inner_x
-  local used_z = char_z + TurmitorClient.position.inner_z
+  local used_y = char_y + TurmitorClient.position.inner_y
 
-  if TurmitorClient.font[used_z] and TurmitorClient.font[used_z][used_x] then
+  if TurmitorClient.font[used_y] and TurmitorClient.font[used_y][used_x] then
     TurmitorClient.queue_block(fg)
   else
     TurmitorClient.queue_block(bg)
@@ -993,7 +993,7 @@ local function listen_for_actions()
           -- block.
           for _, order in ipairs(message.data.orders) do
             if order.x == TurmitorClient.position.x
-              and order.z == TurmitorClient.position.z then
+              and order.y == TurmitorClient.position.y then
               TurmitorClient.queue_block(order.color)
               client_comms.debug("Order is for us.")
               break
@@ -1002,7 +1002,7 @@ local function listen_for_actions()
         elseif message.action == "place" then
           -- Check if this is the turtle that is being told to place a block.
           if message.data.x == TurmitorClient.position.x
-            and message.data.z == TurmitorClient.position.z then
+            and message.data.y == TurmitorClient.position.y then
             TurmitorClient.queue_block(message.data.color)
             client_comms.debug("Order is for us.")
           else
@@ -1027,9 +1027,9 @@ local function listen_for_actions()
                 action = "size",
                 data = {
                   x = TurmitorClient.position.char_x + 1,
-                  z = TurmitorClient.position.char_z + 1,
+                  y = TurmitorClient.position.char_y + 1,
                   actual_x = TurmitorClient.position.x,
-                  actual_z = TurmitorClient.position.z
+                  actual_y = TurmitorClient.position.y
                 }
               }
             )
@@ -1069,29 +1069,29 @@ end
 
 --- Set the position of the turtle in the grid.
 ---@param x number The x position of the turtle in the grid.
----@param z number The z (or y) position of the turtle in the grid.
-function TurmitorClient.set_position(x, z)
+---@param y number The y (or y) position of the turtle in the grid.
+function TurmitorClient.set_position(x, y)
   expect(1, x, "number")
-  expect(2, z, "number")
+  expect(2, y, "number")
 
   TurmitorClient.position.x = x
-  TurmitorClient.position.z = z
+  TurmitorClient.position.y = y
   TurmitorClient.position.char_x = math.floor((x - 1) / 6)
-  TurmitorClient.position.char_z = math.floor((z - 1) / 9)
+  TurmitorClient.position.char_y = math.floor((y - 1) / 9)
   TurmitorClient.position.inner_x = (x - 1) % 6
-  TurmitorClient.position.inner_z = (z - 1) % 9
+  TurmitorClient.position.inner_y = (y - 1) % 9
 
-  client_main.info(("Set position to %d, %d."):format(x, z))
+  client_main.info(("Set position to %d, %d."):format(x, y))
   client_main.info(("--> Char %d, %d; Inner %d, %d."):format(
     TurmitorClient.position.char_x,
-    TurmitorClient.position.char_z,
+    TurmitorClient.position.char_y,
     TurmitorClient.position.inner_x,
-    TurmitorClient.position.inner_z
+    TurmitorClient.position.inner_y
   ))
 
   TurmitorClient.control_channel = TurmitorChannels.get_client_channel(
     TurmitorClient.position.char_x,
-    TurmitorClient.position.char_z
+    TurmitorClient.position.char_y
   )
   client_main.info("Will be listening on channel", TurmitorClient.control_channel)
 
@@ -1100,26 +1100,26 @@ end
 
 --- Get the position of the turtle in the grid.
 ---@return number x The x position of the turtle in the grid.
----@return number z The z (or y) position of the turtle in the grid.
+---@return number y The y (or y) position of the turtle in the grid.
 function TurmitorClient.get_position()
-  return TurmitorClient.position.x, TurmitorClient.position.z
+  return TurmitorClient.position.x, TurmitorClient.position.y
 end
 
 --- Determine the position of the turtle in the grid.
 function TurmitorClient.determine_position()
   client_main.info("Determining position of the turtle.")
 
-  local x, z
+  local x, y
 
   if TurmitorClient.array_style == "vertical" then
     client_main.info("Determining vertical array.")
-    x, z = _determine_vertical()
+    x, y = _determine_vertical()
   else
     client_main.info("Determining horizontal array.")
-    x, z = _determine_horizontal()
+    x, y = _determine_horizontal()
   end
 
-  TurmitorClient.set_position(x, z)
+  TurmitorClient.set_position(x, y)
 end
 
 --- Queue a block placement.
@@ -1169,7 +1169,7 @@ function TurmitorClient.run()
 
     -- Transmit the error to the server.
     local ok_get_name, local_name = pcall(smn.getNameLocal)
-    
+
     pcall(smn.transmit,
       TurmitorChannels.CHANNEL_ERROR,
       0,
