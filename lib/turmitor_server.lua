@@ -329,8 +329,10 @@ end
 
 --- Get the size of the array. We need to wait for a response from the bottom-right-most turtle, so this method may take some time. Returns 0,0 on timeout.
 ---@param max_time number? The maximum time to wait for a response, defaults to 5 seconds.
----@return number x The x size of the array.
----@return number z The z size of the array.
+---@return number x The x size of the array, in characters.
+---@return number z The z size of the array, in characters.
+---@return number actual_x The actual x size of the array.
+---@return number actual_z The actual z size of the array.
 function TurmitorServer.get_size(max_time)
   expect(1, max_time, "number", "nil")
   max_time = max_time or 5
@@ -387,7 +389,7 @@ function TurmitorServer.get_size(max_time)
     getsize_context.warn("Did not receive size response.")
   end
 
-  return response.x or 0, response.z or 0
+  return response.x or 0, response.z or 0, response.actual_x or 0, response.actual_z or 0
 end
 
 --- Get the size of the array. This method will return the cached value if it exists, instead of requesting a new value. Returns 0,0 if the cached value does not exist.
