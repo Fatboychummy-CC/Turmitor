@@ -89,9 +89,7 @@ end
 --- Draw a graphics object to the first buffer.
 ---@param object graphics_object The object to draw.
 local function draw(object)
-  print("Draw...")
   if object.enabled and graphics[object.type] then
-    print("Enabled, calling graphics function")
     graphics[object.type](object, buffer_1)
   end
 end
@@ -102,7 +100,6 @@ local function merge_down()
   sort_pre_buffer()
 
   for _, object in ipairs(pre_buffer) do
-    print("Doodly doodling", object.type)
     draw(object)
   end
 end
@@ -127,14 +124,8 @@ end
 
 --- Update the screen.
 local function update_screen()
-  graphics.debug_buffer(buffer_1)
-  graphics.debug_buffer(buffer_2)
   merge_down()
-  graphics.debug_buffer(buffer_1)
-  graphics.debug_buffer(buffer_2)
   flush()
-  graphics.debug_buffer(buffer_1)
-  graphics.debug_buffer(buffer_2)
 end
 
 --#region Graphics object metatable
@@ -358,6 +349,15 @@ end
 ---@param font unknown? The font to use for the text.
 function turmitor_graphics.text(text, x, y, fg, bg, font)
   error("Not yet implemented.")
+end
+
+--- Clear the pre buffer (remove all objects).
+function turmitor_graphics.clear()
+  pre_buffer = {}
+
+  if auto_update then
+    update_screen()
+  end
 end
 
 --- Manually update the screen.

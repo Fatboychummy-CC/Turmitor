@@ -988,17 +988,6 @@ local function listen_for_actions()
             message.data.fg,
             message.data.bg
           )
-        elseif message.action == "place-batch" then
-          -- Check if this turtle is one of the turtles that should place a
-          -- block.
-          for _, order in ipairs(message.data.orders) do
-            if order.x == TurmitorClient.position.x
-              and order.y == TurmitorClient.position.y then
-              TurmitorClient.queue_block(order.color)
-              client_comms.debug("Order is for us.")
-              break
-            end
-          end
         elseif message.action == "place" then
           -- Check if this is the turtle that is being told to place a block.
           if message.data.x == TurmitorClient.position.x
@@ -1016,6 +1005,24 @@ local function listen_for_actions()
         elseif message.action == "reset" then
           client_comms.warn("Received reset message.")
           reset()
+        elseif message.action == "place-batch" then
+          -- Check if this turtle is one of the turtles that should place a
+          -- block.
+
+          local found = false
+          for _, order in ipairs(message.data.orders) do
+            if order.x == TurmitorClient.position.x
+              and order.y == TurmitorClient.position.y then
+              client_comms.debug("Order is for us.")
+              found = true
+              TurmitorClient.queue_block(order.color)
+              break
+            end
+          end
+
+          if not found then
+            client_comms.debug("Not for us.")
+          end
         elseif message.action == "get-size" then
           if TurmitorClient.is_bottom_right_corner then
             client_comms.info("Received get-size message, responding.")
