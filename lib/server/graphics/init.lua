@@ -189,13 +189,19 @@ end
 --- screen, no matter what you have set `auto_update` to.
 ---@param x integer The width of the screen.
 ---@param y integer The height of the screen.
-function turmitor_graphics.set_size(x, y)
+---@param clear boolean? Whether to clear the screen. Defaults to true.
+function turmitor_graphics.set_size(x, y, clear)
   size.x = x
   size.y = y
+  if type(clear) == "nil" then
+    clear = true
+  end
 
   buffer_1 = graphics.init_buffer(x, y)
   buffer_2 = graphics.init_buffer(x, y)
-  TurmitorServer.clear(colors.black)
+  if clear then
+    TurmitorServer.clear(colors.black)
+  end
 end
 
 --- Get the size of the screen.
@@ -365,5 +371,5 @@ function turmitor_graphics.flush()
   update_screen()
 end
 
-turmitor_graphics.set_size(size.x, size.y)
+turmitor_graphics.set_size(size.x, size.y, false)
 return turmitor_graphics
