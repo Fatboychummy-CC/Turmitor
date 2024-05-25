@@ -128,6 +128,8 @@ end
 --- Set the modem to use for communication.
 ---@param modem_name computerSide The side of the computer the modem is on.
 function TurmitorServer.set_modem(modem_name)
+  expect(1, modem_name, "string")
+
   smn.set_modem(modem_name)
 
   smn.closeAll()

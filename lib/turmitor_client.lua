@@ -1132,6 +1132,8 @@ end
 --- Queue a block placement.
 --- @param color color The color of the block to place.
 function TurmitorClient.queue_block(color)
+  expect(1, color, "number")
+
   TurmitorClient.color_want = color
 
   -- Queue an event to resume the placement coroutine, if it is ready.

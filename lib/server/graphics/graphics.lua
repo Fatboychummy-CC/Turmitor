@@ -70,6 +70,10 @@ end
 ---@param buffer color[][] The buffer to debug.
 function graphics.debug_buffer(buffer)
   local file = fs.open("buffer.txt", "a")
+  if not file then
+    error("Failed to open buffer.txt for writing.", 2)
+  end
+
   file.writeLine("====")
   for y = 1, #buffer do
     local line = ""

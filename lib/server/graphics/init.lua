@@ -1,5 +1,7 @@
 --- Graphics library for the turmitor server.
 
+local expect = require "cc.expect".expect
+
 local TurmitorServer = require "turmitor_server"
 local graphics = require "server.graphics.graphics"
 
@@ -74,6 +76,9 @@ local buffer_2 = {}
 --- If this is true, the screen will be updated after every change.
 local auto_update = false
 
+--- If this is true, the next flush will force the ENTIRE screen to be redrawn.
+local force_update = false
+
 --- The size of the screen.
 local size = { x = 0, y = 0 }
 local _
@@ -109,6 +114,19 @@ end
 local function flush()
   ---@type BatchPixels
   local changes = {}
+
+  if force_update then
+    for y = 1, size.y do
+      for x = 1, size.x do
+        changes[#changes + 1] = { x = x, y = y, color = buffer_1[y][x] }
+        buffer_2[y][x] = buffer_1[y][x]
+      end
+    end
+
+    TurmitorServer.set_pixels(changes)
+    force_update = false
+    return
+  end
 
   for y = 1, size.y do
     for x = 1, size.x do
@@ -191,9 +209,13 @@ end
 ---@param y integer The height of the screen.
 ---@param clear boolean? Whether to clear the screen. Defaults to true.
 function turmitor_graphics.set_size(x, y, clear)
-  size.x = x
-  size.y = y
-  if type(clear) == "nil" then
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, clear, "boolean", "nil")
+
+  size.x = math.floor(x)
+  size.y = math.floor(y)
+  if clear == nil then
     clear = true
   end
 
@@ -215,6 +237,8 @@ end
 --- after every change.
 ---@param enabled boolean Whether to enable auto-update.
 function turmitor_graphics.set_auto_update(enabled)
+  expect(1, enabled, "boolean")
+
   auto_update = enabled
 end
 
@@ -230,6 +254,10 @@ end
 ---@param color color The color of the pixel.
 ---@return turmitor_graphics_object|graphics_object-pixel object The created pixel object.
 function turmitor_graphics.pixel(x, y, color)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, color, "number")
+
   local object = create {
     type = "pixel",
     x = x,
@@ -256,6 +284,13 @@ end
 ---@param thickness integer? The thickness of the line. Defaults to 1.
 ---@return turmitor_graphics_object|graphics_object-line object The created line object.
 function turmitor_graphics.line(x1, y1, x2, y2, color, thickness)
+  expect(1, x1, "number")
+  expect(2, y1, "number")
+  expect(3, x2, "number")
+  expect(4, y2, "number")
+  expect(5, color, "number")
+  expect(6, thickness, "number", "nil")
+
   local object = create {
     type = "line",
     x = x1,
@@ -286,6 +321,14 @@ end
 ---@param filled boolean? Whether the rectangle should be filled. Defaults to false.
 ---@return turmitor_graphics_object|graphics_object-rectangle object The created rectangle object.
 function turmitor_graphics.rectangle(x, y, width, height, color, thickness, filled)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, width, "number")
+  expect(4, height, "number")
+  expect(5, color, "number")
+  expect(6, thickness, "number", "nil")
+  expect(7, filled, "boolean", "nil")
+
   local object = create {
     type = "rectangle",
     x = x,
@@ -317,6 +360,14 @@ end
 ---@param filled boolean? Whether the ellipse should be filled. Defaults to false.
 ---@return turmitor_graphics_object|graphics_object-ellipse object The created ellipse object.
 function turmitor_graphics.ellipse(x, y, a, b, color, thickness, filled)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, a, "number")
+  expect(4, b, "number")
+  expect(5, color, "number")
+  expect(6, thickness, "number", "nil")
+  expect(7, filled, "boolean", "nil")
+
   local object = create {
     type = "ellipse",
     x = x,
@@ -343,6 +394,10 @@ end
 ---@param x integer The x-coordinate of the top-left corner of the image.
 ---@param y integer The y-coordinate of the top-left corner of the image.
 function turmitor_graphics.image(image, x, y)
+  expect(1, image, "table")
+  expect(2, x, "number")
+  expect(3, y, "number")
+
   error("Not yet implemented.")
 end
 
@@ -354,14 +409,25 @@ end
 ---@param bg color? The background color of the text. Leave nil for transparent.
 ---@param font unknown? The font to use for the text.
 function turmitor_graphics.text(text, x, y, fg, bg, font)
+  expect(1, text, "string")
+  expect(2, x, "number")
+  expect(3, y, "number")
+  expect(4, fg, "number", "nil")
+  expect(5, bg, "number", "nil")
+  --expect(6, font, "unknown", "nil")
+
   error("Not yet implemented.")
 end
 
 --- Clear the pre buffer (remove all objects).
-function turmitor_graphics.clear()
+---@param force boolean? Whether to force the screen to update. Defaults to false.
+function turmitor_graphics.clear(force)
   pre_buffer = {}
+  if force then
+    force_update = true
+  end
 
-  if auto_update then
+  if auto_update or force then
     update_screen()
   end
 end
