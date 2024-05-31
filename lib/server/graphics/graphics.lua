@@ -342,7 +342,7 @@ end
 ---@param object graphics_object-image The object to draw.
 ---@param buffer color[][] The buffer to draw to.
 function graphics.image(object, buffer)
-  error("Not yet implemented.")
+
 end
 
 return graphics

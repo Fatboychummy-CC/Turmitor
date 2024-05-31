@@ -4,6 +4,8 @@ local expect = require "cc.expect".expect
 
 local TurmitorServer = require "turmitor_server"
 local graphics = require "server.graphics.graphics"
+local bmp = require "bmp"
+local font = require "server.graphics.font"
 
 local inverted_colors = {}
 for k, v in pairs(colors) do
@@ -22,30 +24,6 @@ local function from_blit(hex)
 
   return inverted_colors[2 ^ n]
 end
-
----@class line_data
----@field text string[] The characters of the line.
----@field fg string[] The foreground colors of the line, in blit format. A space means the color is transparent.
----@field bg string[] The background colors of the line, in blit format. A space means the color is transparent.
-
----@class frame
----@field duration number? The number of seconds this frame should be displayed.
----@field palette table<color, integer> The palette of the frame, mapping color indices to hexadecimal colors. Overrides the global palette.
----@field data line_data[] The data of the frame.
-
----@class image
----@field type string The original type of the image file, like "bimg".
----@field version string The version of the image file, in semver format.
----@field animated boolean Whether the image file is animated.
----@field secondsPerFrame number? The number of seconds each frame should be displayed, required if `animated` is true.
----@field author string? The author of the image file.
----@field description string? A description of the image file, set by the author.
----@field creator string? The program or software that created the image file.
----@field date string? The date the image file was created, ISO-8601 format.
----@field width integer The width of the image, in characters.
----@field height integer The height of the image, in characters.
----@field palette table<color, integer>? The palette of the image, mapping color indices to hexadecimal colors.
----@field frames frame[] The frames of the image.
 
 ---@class turmitor_graphics_object : graphics_object
 ---@field delete fun() Deletes the object from the pre-buffer.
@@ -389,16 +367,123 @@ function turmitor_graphics.ellipse(x, y, a, b, color, thickness, filled)
   return object
 end
 
+--- Create a frame object from a bmp image.
+---@param image bmp-image The image to create the frame from.
+---@return frame frame The created frame.
+local function create_frame(image)
+  expect(1, image, "table")
+
+  ---@class frame
+  ---@field duration number? The number of seconds this frame should be displayed.
+  ---@field palette table<color, integer> The palette of the frame, mapping color indices to hexadecimal colors. Overrides the global palette.
+  ---@field data integer[][] The data of the frame.
+  ---@field width integer The width of the frame.
+  ---@field height integer The height of the frame.
+  local frame = {
+    duration = nil,
+    palette = {},
+    data = {},
+    width = image.width,
+    height = image.height
+  }
+
+  for y = 1, image.height do
+    frame.data[y] = {}
+    for x = 1, image.width do
+      frame.data[y][x] = image.data[y][x]
+    end
+  end
+
+  return frame
+end
+
+--- Create an empty image object. Frames can be added via the `add_frame` method or the `add_image`/`add_folder` methods. To draw the image, use the `image` function.
+---@see TurmitorGraphics.image
+---@return image image The created image object.
+function turmitor_graphics.new_image()
+  ---@class image
+  ---@field animated boolean Whether the image file is animated.
+  ---@field secondsPerFrame number? The number of seconds each frame should be displayed, required if `animated` is true.
+  ---@field width integer The width of the image, in characters.
+  ---@field height integer The height of the image, in characters.
+  ---@field frames frame[] The frames of the image.
+  local image = {
+    animated = false,
+    secondsPerFrame = nil,
+    width = 0,
+    height = 0,
+    frames = {}
+  }
+
+  --- Add a frame to the image.
+  ---@param frame frame The frame to add.
+  function image.add_frame(frame)
+    expect(1, frame, "table")
+
+    image.frames[#image.frames + 1] = frame
+
+    if frame.width > image.width then
+      image.width = frame.width
+    end
+
+    if frame.height > image.height then
+      image.height = frame.height
+    end
+  end
+
+  --- Add all the frames in a folder to the image, sorted alphabetically by filename, expects bmp files.
+  ---@param folder_path string The path to the folder.
+  function image.add_folder(folder_path)
+    expect(1, folder_path, "string")
+
+    local function add_folder(path)
+      local files = fs.list(path)
+      table.sort(files)
+
+      for _, file in ipairs(files) do
+        local file_path = fs.combine(path, file)
+
+        if fs.isDir(file_path) then
+          add_folder(file_path)
+        else
+          local bmp_image = bmp.load(file_path)
+          local frame = create_frame(bmp_image)
+          image.add_frame(frame)
+        end
+      end
+    end
+
+    add_folder(folder_path)
+  end
+
+  return image
+end
+
 --- Draw an image to the screen.
 ---@param image image The image to draw.
----@param x integer The x-coordinate of the top-left corner of the image.
----@param y integer The y-coordinate of the top-left corner of the image.
-function turmitor_graphics.image(image, x, y)
+---@return turmitor_graphics_object|graphics_object-image object The created image object.
+function turmitor_graphics.image(image)
   expect(1, image, "table")
-  expect(2, x, "number")
-  expect(3, y, "number")
 
-  error("Not yet implemented.")
+  local object = create {
+    type = "image",
+    x = 0,
+    y = 0,
+    image = image,
+    draw_order = 0,
+    enabled = true,
+    animate = false,
+    frame = 1,
+    color = 0 -- ignored for images.
+  }
+
+  ---@cast object +graphics_object-image
+
+  if auto_update then
+    update_screen()
+  end
+
+  return object
 end
 
 --- Draw text to the screen.
@@ -422,6 +507,8 @@ end
 --- Clear the pre buffer (remove all objects).
 ---@param force boolean? Whether to force the screen to update. Defaults to false.
 function turmitor_graphics.clear(force)
+  expect(1, force, "boolean", "nil")
+
   pre_buffer = {}
   if force then
     force_update = true
