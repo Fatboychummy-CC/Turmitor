@@ -5,7 +5,6 @@ local expect = require "cc.expect".expect
 local TurmitorServer = require "turmitor_server"
 local graphics = require "server.graphics.graphics"
 local bmp = require "bmp"
-local font = require "server.graphics.font"
 
 local inverted_colors = {}
 for k, v in pairs(colors) do
