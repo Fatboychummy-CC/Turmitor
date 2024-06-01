@@ -2,6 +2,7 @@
 
 local expect = require "cc.expect".expect
 
+local logging = require "logging"
 local TurmitorServer = require "turmitor_server"
 local graphics = require "server.graphics.graphics"
 local bmp = require "bmp"
@@ -12,6 +13,8 @@ for k, v in pairs(colors) do
     inverted_colors[v] = k
   end
 end
+
+local gfx_init_context = logging.create_context("gfx-init")
 
 --- Convert a color from blit to a color that can be used by the turmitor server.
 ---@param hex string The blit color to convert.
@@ -401,15 +404,11 @@ end
 ---@return image image The created image object.
 function turmitor_graphics.new_image()
   ---@class image
-  ---@field animated boolean Whether the image file is animated.
-  ---@field secondsPerFrame number? The number of seconds each frame should be displayed, required if `animated` is true.
   ---@field width integer The width of the image, in characters.
   ---@field height integer The height of the image, in characters.
   ---@field frames frame[] The frames of the image.
   ---@field palette table<integer, color> The palette of the image, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
   local image = {
-    animated = false,
-    secondsPerFrame = nil,
     width = 0,
     height = 0,
     frames = {},
@@ -438,13 +437,19 @@ function turmitor_graphics.new_image()
   end
 
   --- Add a single image to the list of frames. Expects a bmp file.
+  ---@param image_path bmp-image|string The bmp image to add. If a string is provided, it is treated as a path to a bmp file.
   ---@return image image For chaining.
   function image.add_image(image_path)
-    expect(1, image_path, "string")
+    expect(1, image_path, "table", "string")
 
-    local bmp_image = bmp.load(image_path)
-    local frame = create_frame(bmp_image)
-    image.add_frame(frame)
+    if type(image_path) == "table" then
+      local frame = create_frame(image_path)
+      image.add_frame(frame)
+    elseif type(image_path) == "string" then
+      local bmp_image = bmp.read(image_path)
+      local frame = create_frame(bmp_image)
+      image.add_frame(frame)
+    end
 
     return image
   end
@@ -566,7 +571,14 @@ function turmitor_graphics.clear(force)
 end
 
 --- Manually update the screen.
-function turmitor_graphics.flush()
+---@param _force_update boolean? Whether to force every pixel on the screen to update, rather than just the changes. Defaults to false.
+function turmitor_graphics.flush(_force_update)
+  expect(1, _force_update, "boolean", "nil")
+
+  if _force_update then
+    force_update = true
+  end
+
   update_screen()
 end
 

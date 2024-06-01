@@ -1,5 +1,9 @@
 --- Graphical implementation of lines, circles, pixels, etc.
 
+local logging = require "logging"
+
+local gfx_context = logging.create_context("gfx")
+
 ---@class graphics_object
 ---@field enabled boolean Whether the object should be drawn. Ignored by the buffer methods, so parent graphics implementations should handle this.
 ---@field draw_order integer The order in which the object should be drawn. Ignored by the buffer methods, so parent graphics implementations should handle this.
@@ -101,15 +105,14 @@ end
 ---@param buffer color[][] The buffer to draw to.
 function graphics.pixel(object, buffer)
   set_buffer(buffer, object.x, object.y, object.color)
+
+  gfx_context.debug(("Pixel drawn at (%d, %d) with color %d."):format(object.x, object.y, object.color))
 end
 
 --- Write a line to the given buffer.
 ---@param object graphics_object-line The object to draw.
 ---@param buffer color[][] The buffer to draw to.
-function graphics.line(object, buffer, print_debug_info)
-  if print_debug_info then
-    print("====")
-  end
+function graphics.line(object, buffer)
   local x1, x2, y1, y2 = object.x, object.x2, object.y, object.y2
 
   -- Calculate the slope of the line.
@@ -125,9 +128,6 @@ function graphics.line(object, buffer, print_debug_info)
           ##
     and so on.
   ]]
-  if print_debug_info then
-    print("m:", m)
-  end
 
   if math.abs(m) < 1 then
     -- Sort the x-coordinates so that x1 is always less than x2.
@@ -160,19 +160,15 @@ function graphics.line(object, buffer, print_debug_info)
     end
 
     for x_offset = -math.floor(object.thickness / 2), math.ceil(object.thickness / 2) - 1 do
-      if print_debug_info then
-        print("x_offset:", x_offset)
-      end
       for y = y1, y2 do
         local x = math.floor((y - y1) / m + x1) + x_offset
-        if print_debug_info then
-          print("x,y:", x, y)
-        end
 
         set_buffer(buffer, x, y, object.color)
       end
     end
   end
+
+  gfx_context.debug(("Line drawn from (%d, %d) to (%d, %d) with color %d."):format(object.x, object.y, object.x2, object.y2, object.color))
 end
 
 --- Write an ellipse to the given buffer.
@@ -287,6 +283,8 @@ function graphics.ellipse(object, buffer)
       end
     end
   end
+
+  gfx_context.debug(("Ellipse drawn at (%d, %d) with a = %d, b = %d, color %d."):format(object.x, object.y, object.a, object.b, object.color))
 end
 
 --- Write a rectangle to the given buffer.
@@ -329,6 +327,8 @@ function graphics.rectangle(object, buffer)
       set_buffer(buffer, x + width - x_offset - 1, y + y_offset, object.color)
     end
   end
+
+  gfx_context.debug(("Rectangle drawn at (%d, %d) with width %d, height %d, color %d."):format(object.x, object.y, object.width, object.height, object.color))
 end
 
 --- Write text to the given buffer.
@@ -336,6 +336,8 @@ end
 ---@param buffer color[][] The buffer to draw to.
 function graphics.text(object, buffer)
   error("Not yet implemented.")
+
+  gfx_context.debug(("Text drawn at (%d, %d) with text %q, color %d."):format(object.x, object.y, object.text, object.color))
 end
 
 --- Write an image to the given buffer.
@@ -349,14 +351,15 @@ function graphics.image(object, buffer)
   local palette = image.palette
 
   -- Draw the frame.
-  for y = 1, #frame do
-    for x = 1, #frame[y] do
-      if palette[frame[y][x]] ~= -1 then
-        set_buffer(buffer, object.x + x - 1, object.y + y - 1, palette[frame[y][x]])
+  for y = 1, image.height do
+    for x = 1, image.width do
+      if palette[frame.data[y][x]] ~= -1 then
+        set_buffer(buffer, object.x + x - 1, object.y + y - 1, palette[frame.data[y][x]])
       end
     end
   end
 
+  --[[
   -- Final step: increment frame if needed.
   if object.animate then
     object.frame = object.frame + 1
@@ -364,6 +367,10 @@ function graphics.image(object, buffer)
       object.frame = 1
     end
   end
+  ]]
+
+  gfx_context.debug(("Image drawn at (%d, %d) with size (%d, %d)."):format(object.x, object.y, object.image.width, object.image.height))
+  gfx_context.debug(("Frame %d of %d."):format(object.frame, #object.image.frames))
 end
 
 return graphics
