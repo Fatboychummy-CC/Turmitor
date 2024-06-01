@@ -342,7 +342,28 @@ end
 ---@param object graphics_object-image The object to draw.
 ---@param buffer color[][] The buffer to draw to.
 function graphics.image(object, buffer)
+  local image = object.image
 
+  -- Get the current frame.
+  local frame = image.frames[object.frame]
+  local palette = image.palette
+
+  -- Draw the frame.
+  for y = 1, #frame do
+    for x = 1, #frame[y] do
+      if palette[frame[y][x]] ~= -1 then
+        set_buffer(buffer, object.x + x - 1, object.y + y - 1, palette[frame[y][x]])
+      end
+    end
+  end
+
+  -- Final step: increment frame if needed.
+  if object.animate then
+    object.frame = object.frame + 1
+    if object.frame > #object.image.frames then
+      object.frame = 1
+    end
+  end
 end
 
 return graphics

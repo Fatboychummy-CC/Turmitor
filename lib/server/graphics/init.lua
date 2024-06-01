@@ -406,16 +406,21 @@ function turmitor_graphics.new_image()
   ---@field width integer The width of the image, in characters.
   ---@field height integer The height of the image, in characters.
   ---@field frames frame[] The frames of the image.
+  ---@field palette table<integer, color> The palette of the image, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
   local image = {
     animated = false,
     secondsPerFrame = nil,
     width = 0,
     height = 0,
-    frames = {}
+    frames = {},
+    palette = {}
   }
 
-  --- Add a frame to the image.
+  --- Manually add a frame to the list of frames. This is mainly meant for internal use, and you should use `add_image` or `add_folder` instead (unless you know what you're doing).
+  ---@see image.add_image
+  ---@see image.add_folder
   ---@param frame frame The frame to add.
+  ---@return image image For chaining.
   function image.add_frame(frame)
     expect(1, frame, "table")
 
@@ -428,10 +433,25 @@ function turmitor_graphics.new_image()
     if frame.height > image.height then
       image.height = frame.height
     end
+
+    return image
   end
 
-  --- Add all the frames in a folder to the image, sorted alphabetically by filename, expects bmp files.
+  --- Add a single image to the list of frames. Expects a bmp file.
+  ---@return image image For chaining.
+  function image.add_image(image_path)
+    expect(1, image_path, "string")
+
+    local bmp_image = bmp.load(image_path)
+    local frame = create_frame(bmp_image)
+    image.add_frame(frame)
+
+    return image
+  end
+
+  --- Add all the frames in a folder to the list of frames, sorted alphabetically by filename. Expects bmp files, and descends into sub-folders (depth-first).
   ---@param folder_path string The path to the folder.
+  ---@return image image For chaining.
   function image.add_folder(folder_path)
     expect(1, folder_path, "string")
 
@@ -453,6 +473,33 @@ function turmitor_graphics.new_image()
     end
 
     add_folder(folder_path)
+
+    return image
+  end
+
+  --- Update the palette of the image. Missing color values will not be touched.
+  ---@param palette table<integer, color> The palette to use, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
+  ---@return image image For chaining.
+  function image.update_palette(palette)
+    expect(1, palette, "table")
+
+    -- Copy the palette.
+    for k, v in pairs(palette) do
+      if type(k) ~= "number" or type(v) ~= "number" or k % 1 ~= 0 or v % 1 ~= 0 then
+        error("Palette must be a table of integers to colors.", 2)
+      end
+
+      image.palette[k] = v
+    end
+
+    return image
+  end
+
+  --- Clear the palette of the image.
+  ---@return image image For chaining.
+  function image.clear_palette()
+    image.palette = {}
+    return image
   end
 
   return image
