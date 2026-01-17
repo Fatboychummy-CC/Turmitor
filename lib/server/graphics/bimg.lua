@@ -16,7 +16,7 @@ end
 ---@return image? image The BIMG data as image data, or nil if the file is invalid.
 ---@return string? error The error message, or nil if the file is valid.
 function bimg.read(path)
-  local handle = fs.open(path, "r") --[[@as ReadHandle]]
+  local handle = fs.open(path, "r") --[[@as ccTweaked.fs.BinaryReadHandle]]
   if not handle then
     return nil, "File not found."
   end

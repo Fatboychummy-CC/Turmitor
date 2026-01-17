@@ -6,7 +6,7 @@ local TurmitorServer = require "turmitor_server"
 
 --- Convert a color from blit to a color that can be used by the turmitor server.
 ---@param hex string The blit color to convert.
----@return color? valid_color The converted color, or nil if the color is invalid.
+---@return ccTweaked.colors.color? valid_color The converted color, or nil if the color is invalid.
 local function from_blit(hex)
   if #hex ~= 1 then return end
   local n = tonumber(hex, 16)
@@ -49,8 +49,8 @@ end
 
 ---@class BufferChar
 ---@field char string The character to display.
----@field fg color The foreground color.
----@field bg color The background color.
+---@field fg ccTweaked.colors.color The foreground color.
+---@field bg ccTweaked.colors.color The background color.
 
 ---@class TurmitorRedirect
 local redirect = {}
@@ -344,7 +344,7 @@ function redirect.scroll(lines)
 end
 
 --- Set the background color.
----@param color color The color to set the background to.
+---@param color ccTweaked.colors.color The color to set the background to.
 function redirect.setBackgroundColor(color)
   expect(1, color, "number")
 
@@ -354,7 +354,7 @@ end
 redirect.setBackgroundColour = redirect.setBackgroundColor
 
 --- Set the text color.
----@param color color The color to set the text to.
+---@param color ccTweaked.colors.color The color to set the text to.
 function redirect.setTextColor(color)
   expect(1, color, "number")
 

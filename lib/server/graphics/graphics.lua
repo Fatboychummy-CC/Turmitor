@@ -9,7 +9,7 @@ local gfx_context = logging.create_context("gfx")
 ---@field draw_order integer The order in which the object should be drawn. Ignored by the buffer methods, so parent graphics implementations should handle this.
 ---@field x integer The x-coordinate of the object.
 ---@field y integer The y-coordinate of the object.
----@field color color The color of the object.
+---@field color ccTweaked.colors.color The color of the object.
 ---@field type string The type of the object.
 
 ---@class graphics_object-pixel: graphics_object
@@ -53,8 +53,8 @@ local graphics = {}
 --- Initialize a buffer with the given size and color.
 ---@param x_size integer The width of the buffer.
 ---@param y_size integer The height of the buffer.
----@param color color? The color to fill the buffer with.
----@return color[][] buffer The buffer.
+---@param color ccTweaked.colors.color? The color to fill the buffer with.
+---@return ccTweaked.colors.color[][] buffer The buffer.
 function graphics.init_buffer(x_size, y_size, color)
   local buffer = {}
   color = color or colors.black
@@ -71,7 +71,7 @@ function graphics.init_buffer(x_size, y_size, color)
 end
 
 --- Debug a buffer to the console.
----@param buffer color[][] The buffer to debug.
+---@param buffer ccTweaked.colors.color[][] The buffer to debug.
 function graphics.debug_buffer(buffer)
   local file = fs.open("buffer.txt", "a")
   if not file then
@@ -102,7 +102,7 @@ end
 
 --- Write a pixel to the given buffer.
 ---@param object graphics_object-pixel The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.pixel(object, buffer)
   set_buffer(buffer, object.x, object.y, object.color)
 
@@ -111,7 +111,7 @@ end
 
 --- Write a line to the given buffer.
 ---@param object graphics_object-line The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.line(object, buffer)
   local x1, x2, y1, y2 = object.x, object.x2, object.y, object.y2
 
@@ -173,7 +173,7 @@ end
 
 --- Write an ellipse to the given buffer.
 ---@param object graphics_object-ellipse The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.ellipse(object, buffer)
   -- Midpoint ellipse drawing algorithm. Stolen and adapted to lua shamelessly
   -- from https://www.geeksforgeeks.org/mid-point-ellipse-drawing-algorithm/
@@ -197,7 +197,7 @@ function graphics.ellipse(object, buffer)
   -- We need to save the values we plot (in case we want to fill the circle),
   -- so we'll use a table to store the left and right-most points, so we can
   -- fill in using scanlines.
-  ---@type color[][] [y][1] = leftmost x, [y][2] = rightmost x
+  ---@type ccTweaked.colors.color[][] [y][1] = leftmost x, [y][2] = rightmost x
   local scanlines = {}
 
   --- Plot a point on the circle, and update the scanlines table.
@@ -289,7 +289,7 @@ end
 
 --- Write a rectangle to the given buffer.
 ---@param object graphics_object-rectangle The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.rectangle(object, buffer)
   -- If thickness > 1, then we can offset are start positions by -thickness, and
   -- increase the width and height by 2 * thickness. 
@@ -333,7 +333,7 @@ end
 
 --- Write text to the given buffer.
 ---@param object graphics_object-text The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.text(object, buffer)
   error("Not yet implemented.")
 
@@ -342,7 +342,7 @@ end
 
 --- Write an image to the given buffer.
 ---@param object graphics_object-image The object to draw.
----@param buffer color[][] The buffer to draw to.
+---@param buffer ccTweaked.colors.color[][] The buffer to draw to.
 function graphics.image(object, buffer)
   local image = object.image
 

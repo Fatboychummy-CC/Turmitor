@@ -18,7 +18,7 @@ local gfx_init_context = logging.create_context("gfx-init")
 
 --- Convert a color from blit to a color that can be used by the turmitor server.
 ---@param hex string The blit color to convert.
----@return color? valid_color The converted color, or nil if the color is invalid.
+---@return ccTweaked.colors.color? valid_color The converted color, or nil if the color is invalid.
 local function from_blit(hex)
   if #hex ~= 1 then return end
   local n = tonumber(hex, 16)
@@ -44,13 +44,13 @@ local pre_buffer = {}
 
 --- Buffer layer 1: All current changes are made to this buffer, but nothing
 --- here is drawn to the screen.
----@type color[][]
+---@type ccTweaked.colors.color[][]
 local buffer_1 = {}
 
 --- Buffer layer 2: When `.flush()` is called, buffer layer 1 is compared with
 --- this buffer, and only the differences are drawn to the screen. This buffer
 --- is then updated with the new contents.
----@type color[][]
+---@type ccTweaked.colors.color[][]
 local buffer_2 = {}
 
 --- If this is true, the screen will be updated after every change.
@@ -235,7 +235,7 @@ end
 --- Draw a pixel to the screen.
 ---@param x integer The x-coordinate of the pixel.
 ---@param y integer The y-coordinate of the pixel.
----@param color color The color of the pixel.
+---@param color ccTweaked.colors.color The color of the pixel.
 ---@return turmitor_graphics_object|graphics_object-pixel object The created pixel object.
 function turmitor_graphics.pixel(x, y, color)
   expect(1, x, "number")
@@ -264,7 +264,7 @@ end
 ---@param y1 integer The y-coordinate of the start of the line.
 ---@param x2 integer The x-coordinate of the end of the line.
 ---@param y2 integer The y-coordinate of the end of the line.
----@param color color The color of the line.
+---@param color ccTweaked.colors.color The color of the line.
 ---@param thickness integer? The thickness of the line. Defaults to 1.
 ---@return turmitor_graphics_object|graphics_object-line object The created line object.
 function turmitor_graphics.line(x1, y1, x2, y2, color, thickness)
@@ -300,7 +300,7 @@ end
 ---@param y integer The y-coordinate of the top-left corner of the rectangle.
 ---@param width integer The width of the rectangle.
 ---@param height integer The height of the rectangle.
----@param color color The color of the rectangle.
+---@param color ccTweaked.colors.color The color of the rectangle.
 ---@param thickness integer? The thickness of the rectangle. Defaults to 1.
 ---@param filled boolean? Whether the rectangle should be filled. Defaults to false.
 ---@return turmitor_graphics_object|graphics_object-rectangle object The created rectangle object.
@@ -339,7 +339,7 @@ end
 ---@param y integer The y-coordinate of the center of the ellipse.
 ---@param a integer The horizontal radius of the ellipse.
 ---@param b integer The vertical radius of the ellipse. Set to 0 or a to make a circle.
----@param color color The color of the ellipse.
+---@param color ccTweaked.colors.color The color of the ellipse.
 ---@param thickness integer? The line thickness of the ellipse. Defaults to 1.
 ---@param filled boolean? Whether the ellipse should be filled. Defaults to false.
 ---@return turmitor_graphics_object|graphics_object-ellipse object The created ellipse object.
@@ -381,7 +381,7 @@ local function create_frame(image)
 
   ---@class frame
   ---@field duration number? The number of seconds this frame should be displayed.
-  ---@field palette table<color, integer> The palette of the frame, mapping color indices to hexadecimal colors. Overrides the global palette.
+  ---@field palette table<ccTweaked.colors.color, integer> The palette of the frame, mapping color indices to hexadecimal colors. Overrides the global palette.
   ---@field data integer[][] The data of the frame.
   ---@field width integer The width of the frame.
   ---@field height integer The height of the frame.
@@ -412,7 +412,7 @@ function turmitor_graphics.new_image()
   ---@field height integer The height of the image, in characters.
   ---@field frames frame[] The frames of the image.
   ---@field frame_count integer The number of frames in the image.
-  ---@field palette table<integer, color> The palette of the image, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
+  ---@field palette table<integer, ccTweaked.colors.color> The palette of the image, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
   local image = {
     width = 0,
     height = 0,
@@ -477,7 +477,7 @@ function turmitor_graphics.new_image()
         if fs.isDir(file_path) then
           add_folder(file_path)
         else
-          local bmp_image = bmp.load(file_path)
+          local bmp_image = bmp.read(file_path)
           local frame = create_frame(bmp_image)
           image.add_frame(frame)
         end
@@ -490,7 +490,7 @@ function turmitor_graphics.new_image()
   end
 
   --- Update the palette of the image. Missing color values will not be touched.
-  ---@param palette table<integer, color> The palette to use, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
+  ---@param palette table<integer, ccTweaked.colors.color> The palette to use, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
   ---@return image image For chaining.
   function image.update_palette(palette)
     expect(1, palette, "table")
@@ -548,8 +548,8 @@ end
 ---@param text string The text to draw.
 ---@param x integer The x-coordinate of the text.
 ---@param y integer The y-coordinate of the text.
----@param fg color? The foreground color of the text. Leave nil for white.
----@param bg color? The background color of the text. Leave nil for transparent.
+---@param fg ccTweaked.colors.color? The foreground color of the text. Leave nil for white.
+---@param bg ccTweaked.colors.color? The background color of the text. Leave nil for transparent.
 ---@param font unknown? The font to use for the text.
 function turmitor_graphics.text(text, x, y, fg, bg, font)
   expect(1, text, "string")
