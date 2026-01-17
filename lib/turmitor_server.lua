@@ -424,6 +424,11 @@ function TurmitorServer.listen_for_errors()
   end
 end
 
+--- Order all turtles to pick up any currently placed blocks.
+function TurmitorServer.pickup_blocks()
+  send_to_all("pickup", {})
+end
+
 --- Steal items from the turtles and put them in available inventories.
 ---
 --- If `item_lookup`, `chest_lookup`, and `buffer_chest` are provided, the items

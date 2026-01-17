@@ -91,6 +91,7 @@ end
 
 --- Flush the differences of the first buffer to the screen, and update the
 --- second buffer.
+---@return integer number_of_changes The number of changes made to the screen.
 local function flush()
   ---@type BatchPixels
   local changes = {}
@@ -98,32 +99,35 @@ local function flush()
   if force_update then
     for y = 1, size.y do
       for x = 1, size.x do
-        changes[#changes + 1] = { x = x, y = y, color = buffer_1[y][x] }
+        changes[#changes + 1] = { x = x, y = y, color = buffer_1[y][x] or colors.cyan }
         buffer_2[y][x] = buffer_1[y][x]
       end
     end
 
     TurmitorServer.set_pixels(changes)
     force_update = false
-    return
+    return #changes
   end
 
   for y = 1, size.y do
     for x = 1, size.x do
       if buffer_1[y][x] ~= buffer_2[y][x] then
-        changes[#changes + 1] = { x = x, y = y, color = buffer_1[y][x] }
+        changes[#changes + 1] = { x = x, y = y, color = buffer_1[y][x] or colors.cyan }
         buffer_2[y][x] = buffer_1[y][x]
       end
     end
   end
 
   TurmitorServer.set_pixels(changes)
+
+  return #changes
 end
 
 --- Update the screen.
+---@return integer number_of_changes The number of changes made to the screen.
 local function update_screen()
   merge_down()
-  flush()
+  return flush()
 end
 
 --#region Graphics object metatable
@@ -185,8 +189,8 @@ end
 
 --- Set the size of the screen. Warning: this method instantly clears the
 --- screen, no matter what you have set `auto_update` to.
----@param x integer The width of the screen.
----@param y integer The height of the screen.
+---@param x integer The width of the screen, in pixels.
+---@param y integer The height of the screen, in pixels.
 ---@param clear boolean? Whether to clear the screen. Defaults to true.
 function turmitor_graphics.set_size(x, y, clear)
   expect(1, x, "number")
@@ -407,11 +411,13 @@ function turmitor_graphics.new_image()
   ---@field width integer The width of the image, in characters.
   ---@field height integer The height of the image, in characters.
   ---@field frames frame[] The frames of the image.
+  ---@field frame_count integer The number of frames in the image.
   ---@field palette table<integer, color> The palette of the image, mapping color indices to colors. Use the color constants from the `colors` API, and `-1` for transparent pixels.
   local image = {
     width = 0,
     height = 0,
     frames = {},
+    frame_count = 0,
     palette = {}
   }
 
@@ -424,6 +430,7 @@ function turmitor_graphics.new_image()
     expect(1, frame, "table")
 
     image.frames[#image.frames + 1] = frame
+    image.frame_count = #image.frames
 
     if frame.width > image.width then
       image.width = frame.width
@@ -557,6 +564,7 @@ end
 
 --- Clear the pre buffer (remove all objects).
 ---@param force boolean? Whether to force the screen to update. Defaults to false.
+---@return integer number_of_changes The number of changes made to the screen.
 function turmitor_graphics.clear(force)
   expect(1, force, "boolean", "nil")
 
@@ -566,12 +574,14 @@ function turmitor_graphics.clear(force)
   end
 
   if auto_update or force then
-    update_screen()
+    return update_screen()
   end
+  return 0
 end
 
 --- Manually update the screen.
 ---@param _force_update boolean? Whether to force every pixel on the screen to update, rather than just the changes. Defaults to false.
+---@return integer number_of_changes The number of changes made to the screen.
 function turmitor_graphics.flush(_force_update)
   expect(1, _force_update, "boolean", "nil")
 
@@ -579,7 +589,7 @@ function turmitor_graphics.flush(_force_update)
     force_update = true
   end
 
-  update_screen()
+  return update_screen()
 end
 
 turmitor_graphics.set_size(size.x, size.y, false)

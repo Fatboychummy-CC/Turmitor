@@ -348,14 +348,18 @@ function graphics.image(object, buffer)
 
   -- Get the current frame.
   local frame = image.frames[object.frame]
-  local palette = image.palette
+  --local palette = image.palette
 
   -- Draw the frame.
   for y = 1, image.height do
     for x = 1, image.width do
-      if palette[frame.data[y][x]] ~= -1 then
-        set_buffer(buffer, object.x + x - 1, object.y + y - 1, palette[frame.data[y][x]])
-      end
+      --if palette[frame.data[y][x]] ~= -1 then
+        set_buffer(buffer, object.x + x - 1, object.y + y - 1, frame.data[y][x])
+
+        -- Debooging: draw directly to terminal.
+        --term.setCursorPos(object.x + x - 1, object.y + y - 1)
+        --term.blit(' ', colors.toBlit(frame.data[y][x]), colors.toBlit(frame.data[y][x]))
+      --end
     end
   end
 

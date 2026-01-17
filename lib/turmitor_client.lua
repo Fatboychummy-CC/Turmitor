@@ -874,7 +874,7 @@ local function place_block(color)
   expect(1, color, "number", "nil")
 
   -- Ensure the color is valid.
-  if not inverted_colors[color] then
+  if color and not inverted_colors[color] then
     error(("Invalid color specified: %s"):format(color), 0)
   end
 
@@ -1000,7 +1000,7 @@ local function listen_for_actions()
         end
       elseif _channel == TurmitorChannels.CHANNEL_ALL then
         if message.action == "clear" then
-          client_comms.info("Received clear message of color", message.data.color)
+          client_comms.info(("Received clear message of color %x"):format(message.data.color))
           TurmitorClient.queue_block(message.data.color)
         elseif message.action == "reset" then
           client_comms.warn("Received reset message.")
@@ -1013,7 +1013,7 @@ local function listen_for_actions()
           for _, order in ipairs(message.data.orders) do
             if order.x == TurmitorClient.position.x
               and order.y == TurmitorClient.position.y then
-              client_comms.debug("Order is for us.")
+              client_comms.debug(("Order is for us. Color: %x"):format(order.color))
               found = true
               TurmitorClient.queue_block(order.color)
               break
