@@ -142,10 +142,10 @@ end
 ---@field public position TurmitorPosition The current position of the turtle.
 ---@field public array_style "horizontal"|"vertical" The style of the array. If horizontal, the array is built along the x/z axis (i.e flat across the ground). If vertical, the array is built along the x/y axis, with `z` referring to the `y` position.
 ---@field public font table The font data for the turtle.
----@field public blocks_used table<string, color> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
----@field public color_map table<color, integer> A map of color names to the inventory slot they should be in for the turtle.
----@field public current_color color? The current color that the turtle has placed.
----@field public color_want color? The color that the turtle wants to place next. This can update while currently placing a block, and allows the turtle to immediately place what is needed next, if needed.
+---@field public blocks_used table<string, ccTweaked.colors.color> The blocks that are needed to build the screen, and the color they correspond with in the `colors` library.
+---@field public color_map table<ccTweaked.colors.color, integer> A map of color names to the inventory slot they should be in for the turtle.
+---@field public current_color ccTweaked.colors.color? The current color that the turtle has placed.
+---@field public color_want ccTweaked.colors.color? The color that the turtle wants to place next. This can update while currently placing a block, and allows the turtle to immediately place what is needed next, if needed.
 ---@field public guideblock_top "minecraft:polished_andesite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished andesite.
 ---@field public guideblock_left "minecraft:polished_diorite"|string The block that is used to guide the turtle in the horizontal array style. This is by default polished diorite.
 ---@field public control_channel number The channel that the turtle listens on for control messages.
@@ -279,12 +279,12 @@ local function load()
   )
   client_main.debug("Loaded turmitor data.")
 
-  if position_data.x == -1 or position_data.y == -1 then
-    client_main.debug("Loaded data was unknown, determining position.")
-    TurmitorClient.determine_position()
-  elseif not position_data.x or not position_data.y then
+  if not position_data or not position_data.x or not position_data.y then
     client_main.fatal("Loaded data was invalid, resetting.")
     reset()
+  elseif position_data.x == -1 or position_data.y == -1 then
+    client_main.debug("Loaded data was unknown, determining position.")
+    TurmitorClient.determine_position()
   else
     TurmitorClient.set_position(position_data.x, position_data.y)
   end
@@ -353,7 +353,7 @@ end
 
 --- Check if the turtle has the right types of blocks in its inventory, in the
 --- right slots.
----@return table<color, integer> blocks_missing The colors that are missing from the inventory.
+---@return table<ccTweaked.colors.color, integer> blocks_missing The colors that are missing from the inventory.
 local function check_inventory()
   client_main.debug("Checking inventory.")
 
@@ -485,7 +485,7 @@ local function is_turtle_on_side(side)
 end
 
 --- Check if the block on a given side is a turtle, and if so, get the label.
----@param side computerSide The side to get the turtle label from.
+---@param side ccTweaked.peripheral.computerSide The side to get the turtle label from.
 ---@return boolean is_turtle Whether or not the block in that direction is a turtle.
 ---@return string? label The label of the turtle, if it is a turtle and has one.
 local function get_turtle_label(side)
@@ -869,7 +869,7 @@ local function _determine_horizontal()
 end
 
 --- Place a block of the given color.
----@param color color? The color of the block to place.
+---@param color ccTweaked.colors.color? The color of the block to place.
 local function place_block(color)
   expect(1, color, "number", "nil")
 
@@ -945,8 +945,8 @@ end
 --- Queue a block placement using the font data.
 ---@param char_x number The x position of the character in the font.
 ---@param char_y number The y position of the character in the font.
----@param fg color The foreground color of the character.
----@param bg color The background color of the character.
+---@param fg ccTweaked.colors.color The foreground color of the character.
+---@param bg ccTweaked.colors.color The background color of the character.
 local function queue_block_using_font(char_x, char_y, fg, bg)
   local used_x = char_x + TurmitorClient.position.inner_x
   local used_y = char_y + TurmitorClient.position.inner_y
@@ -1130,7 +1130,7 @@ function TurmitorClient.determine_position()
 end
 
 --- Queue a block placement.
---- @param color color The color of the block to place.
+--- @param color ccTweaked.colors.color The color of the block to place.
 function TurmitorClient.queue_block(color)
   expect(1, color, "number")
 

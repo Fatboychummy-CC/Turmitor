@@ -1,6 +1,8 @@
 --- Simple BIMG reader, converter, and verifier.
 
 local ACCEPTED_MAJOR_VERSION = 1
+local log = require "logging".create_context("gfx-bimg")
+
 
 ---@class bimg
 local bimg = {}
@@ -16,6 +18,7 @@ end
 ---@return image? image The BIMG data as image data, or nil if the file is invalid.
 ---@return string? error The error message, or nil if the file is valid.
 function bimg.read(path)
+  log.debug("<--", path)
   local handle = fs.open(path, "r") --[[@as ccTweaked.fs.BinaryReadHandle]]
   if not handle then
     return nil, "File not found."
@@ -40,6 +43,7 @@ function bimg.read(path)
 
   local major, minor, patch = bimg_data.version:match("^(%d+)%.(%d+)%.(%d+)$")
   major, minor, patch = tonumber(major), tonumber(minor), tonumber(patch)
+  log.debug(("BIMG version: %d.%d.%d"):format(major, minor, patch))
 
   if major ~= ACCEPTED_MAJOR_VERSION then
     return nil, "Unsupported BIMG version."
@@ -142,6 +146,8 @@ function bimg.read(path)
     end
   end
 
+  log.debug(image.frame_count, "f |", image.width, "x", image.height, "p")
+
   for frame_number, frame in ipairs(bimg_data) do
     for y, line_data in ipairs(frame) do
       local frame_data = image.frames[frame_number].data
@@ -155,6 +161,7 @@ function bimg.read(path)
     end
   end
 
+  log.debug("-->", path)
   return image
 end
 

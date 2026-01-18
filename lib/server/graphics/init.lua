@@ -14,7 +14,7 @@ for k, v in pairs(colors) do
   end
 end
 
-local gfx_init_context = logging.create_context("gfx-init")
+local log = logging.create_context("gfx-init")
 
 --- Convert a color from blit to a color that can be used by the turmitor server.
 ---@param hex string The blit color to convert.
@@ -523,6 +523,8 @@ end
 function turmitor_graphics.image(image)
   expect(1, image, "table")
 
+  log.debug("<--", image.frame_count, "frames")
+
   local object = create {
     type = "image",
     x = 0,
@@ -541,6 +543,7 @@ function turmitor_graphics.image(image)
     update_screen()
   end
 
+  log.debug("-->", image.frame_count, "frames")
   return object
 end
 

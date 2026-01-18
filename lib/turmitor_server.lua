@@ -81,7 +81,7 @@ end
 ---@class PixelData
 ---@field x number The x position of the pixel.
 ---@field y number The y position of the pixel.
----@field color color The color of the pixel.
+---@field color ccTweaked.colors.color The color of the pixel.
 
 
 ---@class TurmitorServer
@@ -126,7 +126,7 @@ end
 
 
 --- Set the modem to use for communication.
----@param modem_name computerSide The side of the computer the modem is on.
+---@param modem_name ccTweaked.peripheral.computerSide The side of the computer the modem is on.
 function TurmitorServer.set_modem(modem_name)
   expect(1, modem_name, "string")
 
@@ -225,7 +225,7 @@ function TurmitorServer.shutdown(batch_size, batch_time)
 end
 
 --- Clear the entire screen with a specified color.
----@param color color The color to clear the screen with.
+---@param color ccTweaked.colors.color The color to clear the screen with.
 function TurmitorServer.clear(color)
   expect(1, color, "number")
   -- ensure the color is valid (2^n)
@@ -249,8 +249,8 @@ end
 --- Send a character to the specified terminal position.
 ---@param term_x number The x position on the terminal, 1-indexed.
 ---@param term_y number The y position on the terminal, 1-indexed.
----@param fg color|color The foreground color of the character.
----@param bg color|color The background color of the character.
+---@param fg ccTweaked.colors.color The foreground color of the character.
+---@param bg ccTweaked.colors.color The background color of the character.
 ---@param char string The character to display.
 function TurmitorServer.set_character(term_x, term_y, fg, bg, char)
   expect(1, term_x, "number")
@@ -288,7 +288,7 @@ end
 --- Send an update to a single pixel.
 ---@param x number The x position of the pixel, 1-indexed.
 ---@param y number The y position of the pixel, 1-indexed.
----@param color color The color to set the pixel to.
+---@param color ccTweaked.colors.color The color to set the pixel to.
 function TurmitorServer.set_pixel(x, y, color)
   expect(1, x, "number")
   expect(2, y, "number")
@@ -435,8 +435,8 @@ end
 --- will be stolen and placed in the chests according to the lookup tables. If
 --- they are not provided, the items will be stolen and placed in the first
 --- available chest.
----@param item_lookup table<string, color>? A table of item names to colors.
----@param chest_lookup table<color, string[]>? A table of colors to chest names.
+---@param item_lookup table<string, ccTweaked.colors.color>? A table of item names to colors.
+---@param chest_lookup table<ccTweaked.colors.color, string[]>? A table of colors to chest names.
 ---@param buffer_chest string? The name of the buffer chest to use.
 ---@param no_freeze boolean? If true, the turtles will not be frozen before stealing items. This removes some of the wait time, and is mostly useful if you can ensure that nothing will be drawn to the screen during the stealing process.
 function TurmitorServer.steal_items(item_lookup, chest_lookup, buffer_chest, no_freeze)

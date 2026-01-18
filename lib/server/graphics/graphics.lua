@@ -2,7 +2,7 @@
 
 local logging = require "logging"
 
-local gfx_context = logging.create_context("gfx")
+local log = logging.create_context("gfx")
 
 ---@class graphics_object
 ---@field enabled boolean Whether the object should be drawn. Ignored by the buffer methods, so parent graphics implementations should handle this.
@@ -106,7 +106,7 @@ end
 function graphics.pixel(object, buffer)
   set_buffer(buffer, object.x, object.y, object.color)
 
-  gfx_context.debug(("Pixel drawn at (%d, %d) with color %d."):format(object.x, object.y, object.color))
+  log.debug(("Pixel drawn at (%d, %d) with color %d."):format(object.x, object.y, object.color))
 end
 
 --- Write a line to the given buffer.
@@ -168,7 +168,7 @@ function graphics.line(object, buffer)
     end
   end
 
-  gfx_context.debug(("Line drawn from (%d, %d) to (%d, %d) with color %d."):format(object.x, object.y, object.x2, object.y2, object.color))
+  log.debug(("Line drawn from (%d, %d) to (%d, %d) with color %d."):format(object.x, object.y, object.x2, object.y2, object.color))
 end
 
 --- Write an ellipse to the given buffer.
@@ -284,7 +284,7 @@ function graphics.ellipse(object, buffer)
     end
   end
 
-  gfx_context.debug(("Ellipse drawn at (%d, %d) with a = %d, b = %d, color %d."):format(object.x, object.y, object.a, object.b, object.color))
+  log.debug(("Ellipse drawn at (%d, %d) with a = %d, b = %d, color %d."):format(object.x, object.y, object.a, object.b, object.color))
 end
 
 --- Write a rectangle to the given buffer.
@@ -328,7 +328,7 @@ function graphics.rectangle(object, buffer)
     end
   end
 
-  gfx_context.debug(("Rectangle drawn at (%d, %d) with width %d, height %d, color %d."):format(object.x, object.y, object.width, object.height, object.color))
+  log.debug(("Rectangle drawn at (%d, %d) with width %d, height %d, color %d."):format(object.x, object.y, object.width, object.height, object.color))
 end
 
 --- Write text to the given buffer.
@@ -337,7 +337,7 @@ end
 function graphics.text(object, buffer)
   error("Not yet implemented.")
 
-  gfx_context.debug(("Text drawn at (%d, %d) with text %q, color %d."):format(object.x, object.y, object.text, object.color))
+  log.debug(("Text drawn at (%d, %d) with text %q, color %d."):format(object.x, object.y, object.text, object.color))
 end
 
 --- Write an image to the given buffer.
@@ -373,8 +373,8 @@ function graphics.image(object, buffer)
   end
   ]]
 
-  gfx_context.debug(("Image drawn at (%d, %d) with size (%d, %d)."):format(object.x, object.y, object.image.width, object.image.height))
-  gfx_context.debug(("Frame %d of %d."):format(object.frame, #object.image.frames))
+  log.debug(("Image drawn at (%d, %d) with size (%d, %d)."):format(object.x, object.y, object.image.width, object.image.height))
+  log.debug(("Frame %d of %d."):format(object.frame, #object.image.frames))
 end
 
 return graphics
