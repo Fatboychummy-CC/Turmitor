@@ -2,15 +2,17 @@
 
 local to_get = {
   -- Main requirements
-  "extern:startup.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/startup.lua",
-  "extern:initialize.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/initialize.lua",
-  "extern:set_position.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/set_position.lua",
-  "extern:lib/read_fbmp.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/read_fbmp.lua",
-  "extern:lib/turmitor_channels.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turmitor_channels.lua",
-  "extern:lib/turmitor_client.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turmitor_client.lua",
-  "extern:lib/turmitor_server.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turmitor_server.lua",
-  "extern:lib/turtle_facing.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/lib/turtle_facing.lua",
-  "extern:data/font.fbmp:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/data/font.fbmp",
+  "extern:startup.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/startup.lua",
+  "extern:initialize.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/initialize.lua",
+  "extern:set_position.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/set_position.lua",
+  "extern:lib/read_fbmp.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/lib/read_fbmp.lua",
+  "extern:lib/turmitor_channels.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/lib/turmitor_channels.lua",
+  "extern:lib/turmitor_client.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/lib/turmitor_client.lua",
+  "extern:lib/turmitor_server.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/lib/turmitor_server.lua",
+  "extern:lib/turtle_facing.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/lib/turtle_facing.lua",
+  "extern:data/font.fbmp:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/data/font.fbmp",
+  "extern:data/badapple.bimg:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/data/badapple.bimg",
+  "extern:badapple.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/badapple.lua",
 
   -- Main requirements from Libraries
   "L:lib/logging.lua:logging.lua",
@@ -18,10 +20,10 @@ local to_get = {
   "L:lib/single_modem_network.lua:single_modem_network.lua",
 
   -- Installer
-  "extern:installer.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/main/installer.lua",
+  "extern:installer.lua:https://raw.githubusercontent.com/Fatboychummy-CC/Turmitor/refs/heads/badapple/installer.lua",
 }
 
-local program_name = "Turmitor"
+local program_name = "Turmitor (With Bad Apple)"
 local pinestore_id = 80 -- Set this to the ID of the pinestore project if you wish to note to pinestore that a download has occurred.
 
 
@@ -32,9 +34,9 @@ local pinestore_id = 80 -- Set this to the ID of the pinestore project if you wi
 -- Set this to true if you wish to use the diffs to determine which files to
 -- download. Otherwise, it will download all files in `to_get`.
 -- Explanation of diffs is below.
-local use_diffs = true
+local use_diffs = false
 
--- The 'diffs' are used to determine which files are needed to download for 
+-- The 'diffs' are used to determine which files are needed to download for
 -- whichever version of the program you wish to install.
 -- The key is the name of the version you wish to install, and the table it
 -- resolves to should be filled with strings containing either the name of
