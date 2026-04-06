@@ -19,7 +19,7 @@ end
 ---@return string? error The error message, or nil if the file is valid.
 function bimg.read(path)
   log.debug("<--", path)
-  local handle = fs.open(path, "r") --[[@as ccTweaked.fs.BinaryReadHandle]]
+  local handle = fs.open(path, "r") --[[@as ccTweaked.fs.BinaryReadHandle?]]
   if not handle then
     return nil, "File not found."
   end
